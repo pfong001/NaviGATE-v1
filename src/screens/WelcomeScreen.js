@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar } from "react-native";
+import { Svg, Circle, Path } from "react-native-svg";
 
-function WelcomeScreen({ onComplete }) {
+export default function WelcomeScreen({ onComplete }) {
   const [screen, setScreen] = useState("welcome");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -25,7 +26,10 @@ function WelcomeScreen({ onComplete }) {
         <TouchableOpacity style={s.primaryBtn} onPress={() => setScreen("ready")}>
           <Text style={s.primaryBtnText}>Create account</Text>
         </TouchableOpacity>
-        <Text style={s.switchText}>Already have an account? <Text style={s.switchLink} onPress={() => setScreen("login")}>Log in</Text></Text>
+        <Text style={s.switchText}>
+          Already have an account?{" "}
+          <Text style={s.switchLink} onPress={() => setScreen("login")}>Log in</Text>
+        </Text>
       </View>
     </View>
   );
@@ -46,7 +50,10 @@ function WelcomeScreen({ onComplete }) {
         <TouchableOpacity style={s.primaryBtn} onPress={() => setScreen("ready")}>
           <Text style={s.primaryBtnText}>Log in</Text>
         </TouchableOpacity>
-        <Text style={s.switchText}>Don't have an account? <Text style={s.switchLink} onPress={() => setScreen("signup")}>Sign up</Text></Text>
+        <Text style={s.switchText}>
+          Don't have an account?{" "}
+          <Text style={s.switchLink} onPress={() => setScreen("signup")}>Sign up</Text>
+        </Text>
       </View>
     </View>
   );
@@ -75,7 +82,7 @@ function WelcomeScreen({ onComplete }) {
         <Text style={{ fontSize: 28, color: "#fff" }}>✈</Text>
       </View>
       <Text style={s.title}>ONT Navigator</Text>
-      <Text style={s.tagline}>{"Your gate. Your lounge. Your flight.\nAll in one tap."}</Text>
+      <Text style={s.tagline}>Your gate. Your lounge. Your flight.{"\n"}All in one tap.</Text>
       <View style={s.btnGroup}>
         <TouchableOpacity style={s.signupBtn} onPress={() => setScreen("signup")}>
           <Text style={s.signupBtnText}>Get started</Text>
@@ -91,25 +98,6 @@ function WelcomeScreen({ onComplete }) {
     </View>
   );
 }
-
-export default function App() {
-  const [showWelcome, setShowWelcome] = useState(true);
-
-  if (showWelcome) {
-    return <WelcomeScreen onComplete={() => setShowWelcome(false)} />;
-  }
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Home screen coming soon...</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#f0efe9" },
-  text: { fontSize: 16, color: "#888" },
-});
 
 const s = StyleSheet.create({
   hero: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, backgroundColor: "#0e9e8e" },
