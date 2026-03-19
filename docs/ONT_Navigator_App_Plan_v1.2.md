@@ -26,6 +26,8 @@ Ontario International Airport | iOS \& Android | B2C + B2B Platform
 
 | 1.1 | March 18, 2026 | pfong001 | Added: Welcome screen (sign up, log in, guest flow); turquoise brand palette; home screen with map view; category filter pills (centered); quick access bar (bottom of screen); TSA checkpoint wait times with crowd-sourced reporting; baggage tracking with flight-to-carousel mapping; parking payments (pre-book and pay-now); updated tech stack with Stripe SDK; updated risks and mitigations; added 3 new immediate next steps |
 
+| 1.2 | March 19, 2026 | pfong001 | Major redesign: switched to deep navy + gold luxury palette; new hub-style home screen with auto-rotating promo carousel, 2-row feature grid, and business ad cards; bottom tab bar navigation (Home, Map, My Flight, Profile); redesigned map page with pins inside terminal area, TSA wait time badges on checkpoint pins, floor switcher; redesigned flight scanner with departures/arrivals toggle, pinned "my flight" card, flight detail sheet; redesigned TSA page with collapsible tips card, collapsible checkpoint cards, summary stats bar; new profile page (dashboard style with minimal hub + sub-page navigation) including rewards with progress bar and redemption, order history with reorder, saved cards, travel preferences with inline editing (home airport, preferred airline, frequent flyer numbers, traveler programs with KTN/PASSID/CLEAR ID verification for TSA PreCheck, Global Entry, CLEAR, NEXUS, SENTRI, FAST), settings (account, notifications with toggles, app preferences, privacy), sign out; duty-free shopping placeholder added to feature grid |
+
 
 
 \---
@@ -36,7 +38,7 @@ Ontario International Airport | iOS \& Android | B2C + B2B Platform
 
 
 
-ONT Navigator is a mobile application (iOS and Android) purpose-built for Ontario International Airport (ONT). It solves a core traveler pain point — navigating a complex terminal environment — while layering in premium credit card perks, digital boarding pass management, real-time flight data, TSA checkpoint intelligence, baggage tracking, parking payments, and live business promotions. The platform serves two distinct audiences simultaneously:
+ONT Navigator is a mobile application (iOS and Android) purpose-built for Ontario International Airport (ONT). The app features a deep navy and gold luxury design palette, delivering a premium airport companion experience. It solves a core traveler pain point — navigating a complex terminal environment — while layering in premium credit card perks, digital boarding pass management, real-time flight data, TSA checkpoint intelligence, baggage tracking, parking payments, traveler program verification, rewards, and live business promotions. The platform serves two distinct audiences simultaneously:
 
 
 
@@ -153,6 +155,26 @@ The result is an intelligent travel companion that reduces stress, unlocks hidde
 | Category Filter Pills | P1 - Critical | Phase 1 | Centered quick-filter pills: Gates, Dining, Coffee, Lounges, Retail |
 
 | Rich Location Detail Cards | P1 - Critical | Phase 1 | Name, category, rating, hours, reviews, amenity pills |
+
+| Bottom Tab Bar Navigation | P1 - Critical | Phase 1 | Persistent bottom nav: Home, Map, My Flight, Profile; gold active state indicator |
+
+| Promo Carousel | P1 - Critical | Phase 1 | Auto-rotating every 4 seconds; swipe-enabled; airport promotions, exhibits, deals; dot indicators |
+
+| Business Ad Cards | P2 - High | Phase 1 | Scrollable business cards on home screen with icon, description, "View details" and "Navigate" buttons |
+
+| Profile Dashboard | P2 - High | Phase 2 | Minimal hub with stats (reward pts, flights, orders); tappable menu rows navigating to sub-pages |
+
+| Rewards System | P2 - High | Phase 2 | Points display with progress bar to next reward; redeemable rewards (free side, free drink, $5 off); earn rules (10 pts/order, +2 reorder bonus, streak bonus) |
+
+| Order History | P2 - High | Phase 2 | Past orders with business icon, items, total, date, status; reorder and receipt buttons; most recent order shown on profile card; 24hr order count badge |
+
+| Travel Preferences | P2 - High | Phase 2 | Inline editable: home airport dropdown, preferred airline dropdown, frequent flyer numbers (add/remove with airline-specific input), traveler programs (TSA PreCheck, Global Entry, CLEAR, NEXUS, SENTRI, FAST) with KTN/PASSID/Member ID verification |
+
+| Traveler Program Verification | P2 - High | Phase 2 | Users select enrolled programs from list; verify with program-specific ID (KTN for PreCheck, PASSID for Global Entry/SENTRI, NEXUS Member ID, CLEAR Member ID, FAST Card Number); verified status badge with ID displayed |
+
+| Settings Page | P2 - High | Phase 2 | Account management (edit profile, change password, linked accounts); notifications with toggles (push, gate alerts, TSA spikes, promotions, parking expiry); app preferences (language, distance units, map theme); privacy \& data (privacy policy, terms, clear cache, delete account) |
+
+| Duty-Free Shopping | P2 - High | Phase 3 | Placeholder in feature grid; full shopping experience planned for Phase 3 |
 
 | User Accounts (Name + Email) | P1 - Critical | Phase 1 | Session creation synced to boarding pass data |
 
@@ -302,7 +324,7 @@ Phase 1 delivers the core product: a fully functional, geofenced indoor map of O
 
 
 
-Phase 2 transforms the app from a map into a full travel companion. Key additions include the boarding pass scanner, contextual flight widget, flight scanner, TSA checkpoint intelligence, baggage tracking, parking payments, wallet, lounge access intelligence, and arrival geofencing.
+Phase 2 transforms the app from a map into a full travel companion. Key additions include the boarding pass scanner, contextual flight widget, flight scanner with pinned "my flight" card, TSA checkpoint intelligence with collapsible cards and crowd-sourced reporting, baggage tracking, parking payments, profile dashboard with rewards and order history, travel preferences with traveler program verification, wallet, lounge access intelligence, and arrival geofencing.
 
 
 
@@ -310,17 +332,27 @@ Phase 2 transforms the app from a map into a full travel companion. Key addition
 
 \- Contextual Flight Widget: Floating widget appears ONLY after a flight is set (via scanner or Flight Scanner). Shows flight number, gate, and status in a truncated pill. Tap to expand for full details + nav/boarding pass/baggage tracking buttons. Tap "—" to collapse back to pill. Widget is hidden by default on a clean map.
 
-\- Flight Scanner Screen: Full-day departure and arrival board for KONT. Search bar at the top allows users to filter by flight number, airline, city, or gate. Flights grouped by boarding, upcoming, departed/arrived, and cancelled. Tap any flight for a detail sheet with full info + "Set as My Flight" CTA.
+\- Flight Scanner Screen: Full-day departure and arrival board for KONT with departures/arrivals toggle. Search bar allows filtering by flight number, airline, city, or gate. Flights grouped by boarding, upcoming, departed/arrived, and cancelled with color-coded status badges (gold=boarding, green=on time, red=delayed, gray=cancelled, blue=arrived). Tap any flight for a detail sheet with 2x2 info grid + "Set as My Flight" CTA. Pinned "my flight" card with gold border appears at top when set, with navigate and remove buttons.
 
-\- FlightAware AeroAPI: Powers live FIDS board and per-flight lookups. Endpoints: GET /flights/{ident}, GET /airports/KONT/flights/departures, GET /airports/KONT/flights/arrivals. Backend proxy (Node.js/Express) required in production.
+\- FlightAware AeroAPI: Powers live FIDS board and per-flight lookups. Backend proxy (Node.js/Express) required in production.
 
-\- TSA Checkpoint Wait Times: Map pins on Level 2 for each checkpoint (color-coded red). Dedicated TSA Times screen accessible via quick access bar showing all checkpoints with color-coded wait status (green ≤15 min, yellow 16–25 min, red 25+ min), number of crowd-sourced reports, and time since last report. Each checkpoint card shows available lanes (PreCheck, Standard, CLEAR) with navigate and report buttons.
+\- TSA Checkpoint Wait Times: Collapsible checkpoint cards showing color-coded wait time badge, wait status label, and trend indicator (steady/increasing/decreasing) in minimized view. Expanded view shows location, hours, report count, last report time, available lanes in gold pills, report and navigate buttons. Collapsible tips card at top. Summary stats bar showing average wait, total reports, and best option.
 
-\- TSA Crowd-Source Reporting: In-card slider (0–60 min) for travelers to submit their wait time experience. Reports aggregated to update estimated wait times. Builds accuracy and community engagement over time.
+\- TSA Crowd-Source Reporting: Bottom sheet with large color-coded time display, quick-select buttons (5m, 10m, 15m, 20m, 30m, 45m), and submit button with success confirmation animation.
 
-\- Baggage Tracking: Flight-to-carousel mapping with demo data (live API integration in future). Default view shows only the user's flight baggage info (carousel, status, ETA). Color-coded status: Unloading (green), Arriving (yellow), Scheduled (gray), Delayed (red). "Navigate to Carousel" button routes to correct Baggage Claim on Level 1. "View all arrivals" filter button for browsing all flights when assigned carousel may be incorrect. Accessible via quick access bar and flight widget's "Track my baggage" banner. Empty state with prompt to set a flight if none selected.
+\- Baggage Tracking: Flight-to-carousel mapping with demo data. Default view shows only user's flight baggage info. "View all arrivals" filter button. Accessible via quick access bar and flight widget.
 
-\- Parking Payments: Lot selection screen showing available ONT parking options (Terminal 2 Hourly, Terminal 4 Hourly, Daily Lot, Economy Lot). Real-time availability indicators per lot. Rate display (hourly and daily max). Pre-book parking: Select lot, date/time range, vehicle info, and pay in advance. Pay now: Enter lot/space number, start parking timer, pay when leaving. Payment methods: Saved credit card, Apple Pay, Google Pay. Parking timer with push notifications before expiry. Extend parking remotely from within the app. Receipt generation and email confirmation. Navigate to selected parking lot via map.
+\- Parking Payments: Lot selection, pre-booking, pay-now, multiple payment methods, parking timer, extend remotely, receipts, navigate to lot.
+
+\- Profile Dashboard: Minimal hub with three stat cards (reward pts, flights tracked, orders). Tappable menu rows navigating to sub-pages: Rewards, Order History, Saved Cards, Travel Preferences, Settings. Each sub-page has back navigation.
+
+\- Rewards System: Points display (340 pts) with progress bar toward next reward (600 pts). How to earn section (10 pts/order, +2 reorder bonus, 2x streak bonus). Redeemable rewards with "Redeem" buttons.
+
+\- Order History: Past orders with business icon, items ordered, total, date, and green "Completed" status badge. "Reorder" and "Receipt" action buttons. Most recent purchase shown on profile menu card. 24-hour order count badge on profile.
+
+\- Travel Preferences: Inline editable with dropdowns for home airport (ONT, LAX, SNA, etc.) and preferred airline (Southwest, United, Delta, etc.). Frequent flyer numbers with add/remove and airline-specific input. Traveler programs (TSA PreCheck, Global Entry, CLEAR, NEXUS, SENTRI, FAST) — users select programs to add, then verify with program-specific ID entry (KTN, PASSID, CLEAR Member ID, NEXUS Member ID, SENTRI PASSID, FAST Card Number) with contextual hints.
+
+\- Settings: Account management (edit profile, change password, linked accounts). Notifications with toggle switches (push notifications, gate change alerts, TSA wait spikes, promotions \& deals, parking expiry). App preferences (language, distance units, map theme). Privacy \& data (privacy policy, terms of service, clear cache, delete account).
 
 \- Digital Boarding Pass: Full-screen QR code display for use at physical turnstile
 
