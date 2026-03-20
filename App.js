@@ -1,149 +1,1181 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ScrollView, Dimensions } from "react-native";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  StatusBar, ScrollView, Dimensions, SafeAreaView, FlatList,
+  Platform, Modal
+} from "react-native";
 
-var C={navy:"#0c1b2e",navyLight:"#1a2d47",gold:"#c9a84c",goldBg:"#fdf8ec",white:"#fff",gray:"#8899aa",grayLight:"#e8ecf0",bg:"#f4f5f7"};
-var SW=Dimensions.get("window").width;
+const SW = Dimensions.get("window").width;
+const STATUSBAR_H = Platform.OS === "ios" ? 50 : StatusBar.currentHeight || 30;
+const C = {
+  navy: "#0c1b2e", navyLight: "#1a2d47", gold: "#c9a84c", goldBg: "#fdf8ec",
+  white: "#fff", gray: "#8899aa", grayLight: "#e8ecf0", bg: "#f4f5f7",
+  green: "#0a7c4f", red: "#d32f2f", blue: "#1976d2", orange: "#f57c00"
+};
 
-// DATA
-var PROMOS=[{id:1,title:"Art of the Inland Empire",sub:"New exhibit \u00b7 Terminal 2",bg:C.navyLight,accent:C.gold},{id:2,title:"Holiday Travel Deals",sub:"Up to 30% off at ONT shops",bg:"#6b2a3a",accent:"#f5c6d0"},{id:3,title:"Live Music Fridays",sub:"Jazz in Terminal 4 \u00b7 5\u20138 PM",bg:"#2a1a47",accent:"#d4b8f5"},{id:4,title:"New: Mobile Parking",sub:"Pre-book & pay from phone",bg:"#1a3a2a",accent:"#b8f5d4"}];
-var HFEATS=[{id:"map",icon:"\ud83d\uddfa",label:"Map"},{id:"flights",icon:"\ud83d\udccb",label:"Flights"},{id:"tsa",icon:"\ud83d\udee1",label:"TSA times"},{id:"parking",icon:"\ud83c\udd7f\ufe0f",label:"Parking"},{id:"wallet",icon:"\ud83d\udcb3",label:"My wallet"},{id:"dutyfree",icon:"\ud83d\udecd",label:"Duty-free"}];
-var ADS=[{id:1,n:"Escape Lounge",t:"Premium Lounge",d:"Complimentary drinks & hot meals.",i:"\ud83d\udecb",c:"#7c6bc4"},{id:2,n:"Starbucks",t:"Coffee \u00b7 T2",d:"Mobile order ahead.",i:"\u2615",c:"#1e7e34"},{id:3,n:"El Pollo Loco",t:"Dining \u00b7 T2",d:"Fresh grilled chicken combos.",i:"\ud83c\udf57",c:"#d4693e"}];
-var MPOIS=[{id:1,n:"Gate A1",cat:"Gate",fl:2,i:"\u2708",x:18,y:15},{id:2,n:"Gate A2",cat:"Gate",fl:2,i:"\u2708",x:32,y:10},{id:3,n:"Gate A3",cat:"Gate",fl:2,i:"\u2708",x:48,y:7},{id:4,n:"Gate B1",cat:"Gate",fl:2,i:"\u2708",x:64,y:10},{id:5,n:"Gate B2",cat:"Gate",fl:2,i:"\u2708",x:78,y:15},{id:6,n:"Escape Lounge",cat:"Lounge",fl:3,i:"\ud83d\udecb",x:35,y:35,rt:4.6,hr:"5AM\u20139PM",am:["Wi-Fi","Bar","Food"]},{id:7,n:"USO Lounge",cat:"Lounge",fl:3,i:"\ud83d\udecb",x:62,y:35,rt:4.8,am:["Wi-Fi","Snacks"]},{id:8,n:"Starbucks",cat:"Coffee",fl:2,i:"\u2615",x:25,y:45,rt:4.2,am:["Wi-Fi","Mobile Order"]},{id:9,n:"McDonald's",cat:"Dining",fl:2,i:"\ud83c\udf54",x:48,y:50,rt:3.8},{id:10,n:"El Pollo Loco",cat:"Dining",fl:2,i:"\ud83c\udf57",x:72,y:45,rt:4.0},{id:11,n:"Hudson News",cat:"Retail",fl:2,i:"\ud83d\udecd",x:40,y:35,rt:3.9},{id:12,n:"Baggage A",cat:"Service",fl:1,i:"\ud83e\uddf3",x:30,y:30},{id:13,n:"Baggage B",cat:"Service",fl:1,i:"\ud83e\uddf3",x:65,y:30},{id:14,n:"TSA-A",cat:"TSA",fl:2,i:"\ud83d\udee1",x:30,y:28,w:12,am:["PreCheck","Standard"]},{id:15,n:"TSA-B",cat:"TSA",fl:2,i:"\ud83d\udee1",x:66,y:28,w:22,am:["PreCheck","Standard","CLEAR"]}];
-var FLD=[{fn:"SW 1423",al:"Southwest",dest:"Los Angeles (LAX)",g:"A2",t:"10:15 AM",st:"Boarding",tp:"dep"},{fn:"UA 892",al:"United",dest:"San Francisco (SFO)",g:"B1",t:"10:30 AM",st:"Boarding",tp:"dep"},{fn:"DL 345",al:"Delta",dest:"Atlanta (ATL)",g:"A3",t:"11:45 AM",st:"On time",tp:"dep"},{fn:"AA 1102",al:"American",dest:"Dallas (DFW)",g:"B2",t:"12:20 PM",st:"Delayed",tp:"dep"},{fn:"SW 2281",al:"Southwest",dest:"Denver (DEN)",g:"A1",t:"1:05 PM",st:"On time",tp:"dep"},{fn:"AA 455",al:"American",dest:"Chicago (ORD)",g:"B2",t:"4:00 PM",st:"Cancelled",tp:"dep"},{fn:"SW 734",al:"Southwest",from:"Phoenix (PHX)",g:"A1",t:"9:45 AM",st:"Arrived",tp:"arr"},{fn:"UA 321",al:"United",from:"Denver (DEN)",g:"B1",t:"10:50 AM",st:"On time",tp:"arr"},{fn:"AA 998",al:"American",from:"Miami (MIA)",g:"B2",t:"1:15 PM",st:"Delayed",tp:"arr"}];
-var TSAD=[{id:1,n:"TSA Checkpoint A",loc:"T2 \u00b7 Gate A1",hr:"4AM\u201310PM",ln:["PreCheck","Standard"],w:12,rp:14,lr:"2 min ago",tr:"steady"},{id:2,n:"TSA Checkpoint B",loc:"T2 \u00b7 Gate B1",hr:"4AM\u201310PM",ln:["PreCheck","Standard","CLEAR"],w:22,rp:9,lr:"5 min ago",tr:"increasing"}];
-var SC={"Boarding":{bg:"#fdf8ec",c:"#8b6914",d:"#c9a84c"},"On time":{bg:"#e6f9f0",c:"#0a7c4f",d:"#0a7c4f"},"Delayed":{bg:"#fce8e8",c:"#c0392b",d:"#c0392b"},"Cancelled":{bg:"#f5f0f0",c:"#888",d:"#888"},"Arrived":{bg:"#e6f1fb",c:"#185fa5",d:"#185fa5"}};
-var CC={Gate:C.gold,Lounge:"#9b7fd4",Coffee:"#c8950f",Dining:"#d4693e",Retail:"#c45488",Service:"#5a9fd4",TSA:"#e05555"};
-function wc(w){return w<=15?"#0a7c4f":w<=25?"#b8860b":"#c0392b"}
-function wb(w){return w<=15?"#e6f9f0":w<=25?"#fff8e6":"#fce8e8"}
-function wl(w){return w<=15?"Short wait":w<=25?"Moderate wait":"Long wait"}
+// ============ SHARED: STATUS BAR SPACER (FIX #4) ============
+function TopSpacer() {
+  return <View style={{ height: STATUSBAR_H, backgroundColor: C.navy }} />;
+}
 
-var WCARDS=[{id:1,n:"Amex Platinum",l4:"4821",br:"AMEX",co:"#2a2a2a",ac:"#c0c0c0",pk:["Escape Lounge","Priority boarding","$200 airline credit"],lg:["Escape Lounge"]},{id:2,n:"Chase Sapphire Reserve",l4:"7734",br:"VISA",co:"#1a2d5c",ac:"#4a7ccc",pk:["Escape Lounge","Priority Pass","$300 travel credit"],lg:["Escape Lounge"]},{id:3,n:"Capital One Venture X",l4:"3190",br:"VISA",co:"#1a1a3a",ac:"#8a6ec8",pk:["Escape Lounge","Capital One Lounges","$300 travel credit"],lg:["Escape Lounge"]}];
-var PHIST=[{id:1,d:"Starbucks \u00b7 T2",a:"$9.45",dt:"Mar 18",cd:"Amex \u2022\u20224821",i:"\u2615"},{id:2,d:"Parking \u00b7 Lot A",a:"$24.00",dt:"Mar 18",cd:"Chase \u2022\u20227734",i:"\ud83c\udd7f\ufe0f"},{id:3,d:"El Pollo Loco",a:"$14.20",dt:"Mar 12",cd:"Amex \u2022\u20224821",i:"\ud83c\udf57"},{id:4,d:"Hudson News",a:"$18.75",dt:"Feb 28",cd:"Venture X \u2022\u20223190",i:"\ud83d\udecd"}];
-var DFCATS=[{id:"all",n:"All",i:"\u2728"},{id:"fragrance",n:"Fragrance",i:"\ud83d\udc90"},{id:"liquor",n:"Liquor",i:"\ud83c\udf77"},{id:"electronics",n:"Electronics",i:"\ud83c\udfa7"},{id:"fashion",n:"Fashion",i:"\ud83d\udc5c"},{id:"chocolate",n:"Snacks",i:"\ud83c\udf6b"},{id:"souvenirs",n:"Gifts",i:"\ud83c\udf81"},{id:"health",n:"Health",i:"\ud83d\udc8a"},{id:"home",n:"Home",i:"\ud83c\udfe0"}];
-var DFPRODS=[{id:1,n:"Chanel No. 5",br:"Chanel",p:"$89.99",o:"$135",sv:"33%",i:"\ud83d\udc90",ct:"fragrance",ex:true},{id:2,n:"Sauvage EDT",br:"Dior",p:"$72.50",o:"$105",sv:"31%",i:"\ud83e\uddf4",ct:"fragrance"},{id:3,n:"Johnnie Walker Blue",br:"JW",p:"$149.99",o:"$230",sv:"35%",i:"\ud83e\udd43",ct:"liquor",ex:true},{id:4,n:"Grey Goose 1L",br:"Grey Goose",p:"$34.99",o:"$50",sv:"30%",i:"\ud83c\udf78",ct:"liquor"},{id:5,n:"AirPods Pro 2",br:"Apple",p:"$199.99",o:"$250",sv:"20%",i:"\ud83c\udfa7",ct:"electronics"},{id:6,n:"Bose QC45",br:"Bose",p:"$229.99",o:"$330",sv:"30%",i:"\ud83c\udfa7",ct:"electronics",ex:true},{id:7,n:"Godiva Gold Box",br:"Godiva",p:"$24.99",o:"$35",sv:"29%",i:"\ud83c\udf6b",ct:"chocolate"},{id:8,n:"Ray-Ban Aviator",br:"Ray-Ban",p:"$119.99",o:"$163",sv:"26%",i:"\ud83d\udd76",ct:"fashion"},{id:9,n:"ONT Snow Globe",br:"ONT Shop",p:"$14.99",i:"\ud83c\udf81",ct:"souvenirs",ex:true},{id:10,n:"CA Candle Set",br:"ONT Shop",p:"$24.99",o:"$32",sv:"22%",i:"\ud83d\udd6f",ct:"home"}];
-var DFPROMOS=[{id:1,t:"Buy 2, Get 1 Free",s:"All fragrances this week",bg:"#2a1a3a",ac:"#d4b8f5"},{id:2,t:"20% Off Electronics",s:"Pre-order & pick up",bg:"#1a3a2a",ac:"#b8f5d4"},{id:3,t:"ONT Exclusive Sets",s:"Limited edition bundles",bg:"#3a1a1a",ac:"#f5c6b8"}];
+// ============ SHARED: SCREEN HEADER WITH BACK BUTTON ============
+function ScreenHeader({ title, subtitle, goHome }) {
+  return (
+    <View style={{ backgroundColor: C.navy, padding: 16, paddingBottom: subtitle ? 14 : 16 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <TouchableOpacity onPress={goHome} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: C.navyLight, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: C.gold, fontSize: 16 }}>←</Text>
+        </TouchableOpacity>
+        <View>
+          <Text style={{ color: C.white, fontSize: 18, fontWeight: "700" }}>{title}</Text>
+          {subtitle && <Text style={{ color: C.gray, fontSize: 12, marginTop: 2 }}>{subtitle}</Text>}
+        </View>
+      </View>
+    </View>
+  );
+}
 
-// BOTTOM TAB
-function BT({act,nav}){return <View style={bt.bar}>{[{id:"home",i:"\ud83c\udfe0",l:"Home"},{id:"map",i:"\ud83d\uddfa",l:"Map"},{id:"flights",i:"\u2708",l:"My flight"},{id:"profile",i:"\ud83d\udc64",l:"Profile"}].map(function(t){return <TouchableOpacity key={t.id} style={bt.tab} onPress={function(){nav(t.id)}}><Text style={{fontSize:20}}>{t.i}</Text><Text style={[bt.lbl,act===t.id&&{color:C.gold,fontWeight:"700"}]}>{t.l}</Text></TouchableOpacity>})}</View>}
-var bt=StyleSheet.create({bar:{flexDirection:"row",justifyContent:"space-around",paddingVertical:10,paddingBottom:20,backgroundColor:C.white,borderTopWidth:1,borderTopColor:C.grayLight},tab:{alignItems:"center",gap:2},lbl:{fontSize:10,fontWeight:"500",color:C.gray}});
+// ============ SHARED: PROMO CAROUSEL ============
+function PromoCarousel({ items, autoPlay = true, interval = 4000 }) {
+  const [active, setActive] = useState(0);
+  const flatRef = useRef(null);
+  const timerRef = useRef(null);
+  const cardW = SW - 48;
 
-// WELCOME
-function Welcome({done}){var[sc,setSc]=useState("w"),[em,sEm]=useState(""),[nm,sNm]=useState(""),[pw,sPw]=useState("");
-if(sc==="su")return <View style={ws.fb}><StatusBar barStyle="dark-content"/><View style={ws.fi}><TouchableOpacity onPress={function(){setSc("w")}}><Text style={ws.bk}>{"\u2190 Back"}</Text></TouchableOpacity><Text style={ws.ft}>Create account</Text><Text style={ws.fs}>Start navigating ONT like a pro.</Text><Text style={ws.lb}>Full name</Text><TextInput style={ws.inp} placeholder="e.g. Alex Rivera" value={nm} onChangeText={sNm}/><Text style={ws.lb}>Email</Text><TextInput style={ws.inp} placeholder="you@email.com" keyboardType="email-address" value={em} onChangeText={sEm} autoCapitalize="none"/><Text style={ws.lb}>Password</Text><TextInput style={ws.inp} placeholder="6+ characters" secureTextEntry value={pw} onChangeText={sPw}/><TouchableOpacity style={ws.pb} onPress={function(){setSc("r")}}><Text style={ws.pbt}>Create account</Text></TouchableOpacity><Text style={ws.sw}>Already have an account? <Text style={ws.sl} onPress={function(){setSc("li")}}>Log in</Text></Text></View></View>;
-if(sc==="li")return <View style={ws.fb}><StatusBar barStyle="dark-content"/><View style={ws.fi}><TouchableOpacity onPress={function(){setSc("w")}}><Text style={ws.bk}>{"\u2190 Back"}</Text></TouchableOpacity><Text style={ws.ft}>Welcome back</Text><Text style={ws.fs}>Log in to pick up where you left off.</Text><Text style={ws.lb}>Email</Text><TextInput style={ws.inp} placeholder="you@email.com" keyboardType="email-address" value={em} onChangeText={sEm} autoCapitalize="none"/><Text style={ws.lb}>Password</Text><TextInput style={ws.inp} placeholder="Your password" secureTextEntry value={pw} onChangeText={sPw}/><TouchableOpacity style={ws.pb} onPress={function(){setSc("r")}}><Text style={ws.pbt}>Log in</Text></TouchableOpacity><Text style={ws.sw}>Don't have an account? <Text style={ws.sl} onPress={function(){setSc("su")}}>Sign up</Text></Text></View></View>;
-if(sc==="r")return <View style={ws.h}><StatusBar barStyle="light-content"/><View style={ws.ck}><Text style={{fontSize:36,color:C.gold}}>{"\u2713"}</Text></View><Text style={ws.rt}>You're all set</Text><Text style={ws.rs}>Your ONT Navigator is ready.</Text><TouchableOpacity style={ws.rb} onPress={done}><Text style={ws.rbt}>Open the app</Text></TouchableOpacity></View>;
-return <View style={ws.h}><StatusBar barStyle="light-content"/><View style={ws.bdg}><Text style={ws.bdgT}>ONTARIO INTERNATIONAL AIRPORT</Text></View><View style={ws.lg}><Text style={{fontSize:28,color:C.gold}}>{"\u2708"}</Text></View><Text style={ws.ti}>ONT Navigator</Text><Text style={ws.tg}>{"Your gate. Your lounge. Your flight.\nAll in one tap."}</Text><View style={ws.bg}><TouchableOpacity style={ws.sb} onPress={function(){setSc("su")}}><Text style={ws.sbt}>Get started</Text></TouchableOpacity><TouchableOpacity style={ws.lb2} onPress={function(){setSc("li")}}><Text style={ws.lbt}>I already have an account</Text></TouchableOpacity><TouchableOpacity onPress={done}><Text style={ws.gl}>{"Continue as guest \u2192"}</Text></TouchableOpacity></View></View>}
-var ws=StyleSheet.create({h:{flex:1,alignItems:"center",justifyContent:"center",padding:32,backgroundColor:C.navy},bdg:{backgroundColor:"rgba(201,168,76,0.12)",borderRadius:30,paddingVertical:6,paddingHorizontal:16,marginBottom:40},bdgT:{fontSize:11,fontWeight:"600",color:C.gold,letterSpacing:1.5},lg:{width:72,height:72,borderRadius:20,backgroundColor:"rgba(201,168,76,0.1)",alignItems:"center",justifyContent:"center",marginBottom:20,borderWidth:1,borderColor:"rgba(201,168,76,0.2)"},ti:{fontSize:34,fontWeight:"800",color:C.white,marginBottom:12},tg:{fontSize:16,color:"rgba(255,255,255,0.75)",textAlign:"center",lineHeight:24,marginBottom:48},bg:{width:"100%",maxWidth:320,alignItems:"center"},sb:{width:"100%",paddingVertical:15,borderRadius:14,backgroundColor:C.gold,alignItems:"center",marginBottom:10},sbt:{fontSize:16,fontWeight:"700",color:C.navy},lb2:{width:"100%",paddingVertical:15,borderRadius:14,borderWidth:2,borderColor:"rgba(201,168,76,0.3)",alignItems:"center"},lbt:{fontSize:15,fontWeight:"600",color:C.gold},gl:{fontSize:14,color:"rgba(255,255,255,0.5)",fontWeight:"500",marginTop:20},fb:{flex:1,backgroundColor:C.white,justifyContent:"center"},fi:{padding:32},bk:{fontSize:15,color:C.gold,fontWeight:"600",marginBottom:24},ft:{fontSize:24,fontWeight:"700",color:C.navy,marginBottom:4},fs:{fontSize:14,color:C.gray,marginBottom:28},lb:{fontSize:13,fontWeight:"600",color:"#444",marginBottom:6,marginTop:16},inp:{width:"100%",paddingVertical:12,paddingHorizontal:14,borderRadius:12,borderWidth:1.5,borderColor:C.grayLight,fontSize:15,backgroundColor:"#fafafa"},pb:{width:"100%",paddingVertical:14,borderRadius:14,backgroundColor:C.navy,alignItems:"center",marginTop:24},pbt:{fontSize:16,fontWeight:"700",color:C.gold},sw:{textAlign:"center",marginTop:16,fontSize:13,color:C.gray},sl:{color:C.gold,fontWeight:"600"},ck:{width:80,height:80,borderRadius:40,backgroundColor:"rgba(201,168,76,0.12)",alignItems:"center",justifyContent:"center",marginBottom:20},rt:{fontSize:26,fontWeight:"700",color:C.white,marginBottom:8},rs:{fontSize:15,color:"rgba(255,255,255,0.75)",textAlign:"center",marginBottom:32},rb:{backgroundColor:C.gold,paddingVertical:14,paddingHorizontal:48,borderRadius:14},rbt:{fontSize:16,fontWeight:"700",color:C.navy}});
+  const startTimer = useCallback(() => {
+    if (!autoPlay) return;
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setActive(prev => {
+        const next = (prev + 1) % items.length;
+        flatRef.current?.scrollToOffset({ offset: next * (cardW + 12), animated: true });
+        return next;
+      });
+    }, interval);
+  }, [items.length, interval, autoPlay, cardW]);
 
-// HOME
-function Home({nav}){var[ap,sAp]=useState(0),pr=useRef(null);
-useEffect(function(){var t=setInterval(function(){sAp(function(p){var n=(p+1)%PROMOS.length;pr.current&&pr.current.scrollTo({x:n*(SW-40),animated:true});return n})},4000);return function(){clearInterval(t)}},[]);
-return <View style={hs.c}><StatusBar barStyle="light-content"/><View style={hs.hd}><View><Text style={hs.sub}>ONTARIO INTERNATIONAL</Text><Text style={hs.hdT}>{"Good morning \u2708"}</Text></View><TouchableOpacity style={hs.pf} onPress={function(){nav("profile")}}><Text style={{fontSize:16}}>{"\ud83d\udc64"}</Text></TouchableOpacity></View>
-<ScrollView style={{flex:1}} showsVerticalScrollIndicator={false}><View style={hs.sw}><Text style={{fontSize:14,color:C.gray}}>{"\ud83d\udd0d"}</Text><TextInput style={hs.si} placeholder="Search gates, food, lounges..." placeholderTextColor={C.gray}/></View>
-<View style={{marginTop:20}}><View style={hs.sh}><Text style={hs.st}>What's happening at ONT</Text><Text style={hs.sL}>See all</Text></View>
-<ScrollView ref={pr} horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingHorizontal:20}} decelerationRate="fast" snapToInterval={SW-40} snapToAlignment="start" onMomentumScrollEnd={function(e){var i=Math.round(e.nativeEvent.contentOffset.x/(SW-40));if(i>=0&&i<PROMOS.length)sAp(i)}}>{PROMOS.map(function(p){return <View key={p.id} style={[hs.pc,{backgroundColor:p.bg,width:SW-40}]}><Text style={hs.pt}>{p.title}</Text><Text style={[hs.ps,{color:p.accent}]}>{p.sub}</Text><View style={hs.pbn}><Text style={hs.pbnt}>Learn more</Text></View></View>})}</ScrollView>
-<View style={hs.dts}>{PROMOS.map(function(_,i){return <View key={i} style={[hs.dt,{width:i===ap?18:6,backgroundColor:i===ap?C.gold:C.grayLight}]}/>})}</View></View>
-<View style={hs.sec}><Text style={hs.st}>Quick access</Text><View style={hs.fg}>{HFEATS.map(function(f){return <TouchableOpacity key={f.id} style={hs.fItem} onPress={function(){nav(f.id)}}><View style={hs.fIc}><Text style={{fontSize:22}}>{f.icon}</Text></View><Text style={hs.fLb}>{f.label}</Text></TouchableOpacity>})}</View></View>
-<View style={[hs.sec,{paddingBottom:30}]}><View style={hs.sh}><Text style={hs.st}>Explore ONT businesses</Text><Text style={hs.sL}>View all</Text></View>{ADS.map(function(a){return <View key={a.id} style={hs.ac}><View style={{flexDirection:"row",gap:14}}><View style={[hs.ai,{backgroundColor:a.c+"18"}]}><Text style={{fontSize:26}}>{a.i}</Text></View><View style={{flex:1}}><Text style={hs.an}>{a.n}</Text><Text style={hs.at}>{a.t}</Text><Text style={hs.ad}>{a.d}</Text></View></View><View style={{flexDirection:"row",gap:8,marginTop:12}}><TouchableOpacity style={hs.abo}><Text style={hs.abot}>Details</Text></TouchableOpacity><TouchableOpacity style={hs.abf} onPress={function(){nav("map")}}><Text style={hs.abft}>Navigate</Text></TouchableOpacity></View></View>})}</View></ScrollView><BT act="home" nav={nav}/></View>}
-var hs=StyleSheet.create({c:{flex:1,backgroundColor:C.bg},hd:{backgroundColor:C.navy,paddingHorizontal:20,paddingTop:50,paddingBottom:24,flexDirection:"row",justifyContent:"space-between",alignItems:"center",borderBottomLeftRadius:24,borderBottomRightRadius:24},sub:{fontSize:11,color:C.gold,fontWeight:"600",letterSpacing:1.5,marginBottom:4},hdT:{fontSize:24,fontWeight:"800",color:C.white},pf:{width:40,height:40,borderRadius:20,backgroundColor:"rgba(255,255,255,0.1)",alignItems:"center",justifyContent:"center",borderWidth:1.5,borderColor:"rgba(201,168,76,0.3)"},sw:{marginHorizontal:20,marginTop:-18,backgroundColor:C.white,borderRadius:16,paddingVertical:12,paddingHorizontal:16,flexDirection:"row",alignItems:"center",gap:10,shadowColor:"#000",shadowOpacity:0.06,shadowRadius:12,elevation:4,zIndex:5},si:{flex:1,fontSize:15,color:C.navy},sh:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:12},st:{fontSize:16,fontWeight:"700",color:C.navy},sL:{fontSize:12,color:C.gold,fontWeight:"600"},sec:{marginHorizontal:20,marginTop:24},pc:{height:140,borderRadius:18,padding:18,justifyContent:"center"},pt:{fontSize:18,fontWeight:"800",color:C.white,marginBottom:6,lineHeight:24},ps:{fontSize:12,fontWeight:"600"},pbn:{marginTop:10,backgroundColor:"rgba(255,255,255,0.15)",alignSelf:"flex-start",paddingVertical:5,paddingHorizontal:14,borderRadius:20},pbnt:{fontSize:11,fontWeight:"600",color:C.white},dts:{flexDirection:"row",justifyContent:"center",gap:6,marginTop:10},dt:{height:6,borderRadius:3},fg:{flexDirection:"row",flexWrap:"wrap",gap:12,marginTop:2},fItem:{width:(SW-64)/3,alignItems:"center",gap:8,paddingVertical:16,backgroundColor:C.white,borderRadius:16,shadowColor:"#000",shadowOpacity:0.03,shadowRadius:6,elevation:1},fIc:{width:48,height:48,borderRadius:14,backgroundColor:C.goldBg,alignItems:"center",justifyContent:"center"},fLb:{fontSize:12,fontWeight:"600",color:C.navy,textAlign:"center"},ac:{backgroundColor:C.white,borderRadius:18,padding:16,marginBottom:12,elevation:1},ai:{width:56,height:56,borderRadius:14,alignItems:"center",justifyContent:"center"},an:{fontSize:15,fontWeight:"700",color:C.navy},at:{fontSize:11,color:C.gold,fontWeight:"600",marginTop:1},ad:{fontSize:12,color:C.gray,marginTop:4,lineHeight:18},abo:{flex:1,paddingVertical:8,borderRadius:10,borderWidth:1.5,borderColor:C.grayLight,alignItems:"center"},abot:{fontSize:12,fontWeight:"600",color:C.navy},abf:{flex:1,paddingVertical:8,borderRadius:10,backgroundColor:C.navy,alignItems:"center"},abft:{fontSize:12,fontWeight:"700",color:C.gold}});
+  useEffect(() => { startTimer(); return () => clearInterval(timerRef.current); }, [startTimer]);
 
-// MAP
-function MapScreen({nav}){var[fl,sFl]=useState(2),[sr,sSr]=useState(""),[sel,sSel]=useState(null),[rt,sRt]=useState(null),[af,sAf]=useState("All");
-var cm={Gates:"Gate",Lounges:"Lounge",Dining:"Dining",Coffee:"Coffee",TSA:"TSA"};
-var fps=MPOIS.filter(function(p){if(p.fl!==fl)return false;if(sr.length>0)return p.n.toLowerCase().includes(sr.toLowerCase())||p.cat.toLowerCase().includes(sr.toLowerCase());if(af!=="All")return p.cat===cm[af];return true});
-return <View style={ms.c}><StatusBar barStyle="light-content"/><View style={ms.hd}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:10,paddingTop:4}}><TouchableOpacity style={ms.bb} onPress={function(){nav("home")}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>Map</Text><View style={{width:36}}/></View><View style={ms.srw}><Text style={{fontSize:14,color:"rgba(255,255,255,0.4)"}}>{"\ud83d\udd0d"}</Text><TextInput style={ms.sri} placeholder="Search gates, food..." placeholderTextColor="rgba(255,255,255,0.3)" value={sr} onChangeText={function(v){sSr(v);sAf("All");sSel(null)}}/></View>
-<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:10}}>{["All","Gates","Dining","Coffee","Lounges","TSA"].map(function(f){return <TouchableOpacity key={f} style={[ms.fp,af===f&&ms.fpa]} onPress={function(){sAf(f);sSr("");sSel(null)}}><Text style={[ms.ft,af===f&&ms.fta]}>{f}</Text></TouchableOpacity>})}</ScrollView></View>
-<View style={ms.ma}><View style={ms.tb}><Text style={ms.tl}>{"ONT Terminal \u00b7 "}{fl===1?"Arrivals":fl===2?"Departures":"Lounges"}</Text></View>
-<View style={ms.pg}>{fps.map(function(p){return <TouchableOpacity key={p.id} style={ms.pi} onPress={function(){sSel(p)}}><View style={[ms.pd,{backgroundColor:p.cat==="TSA"&&p.w?(p.w<=15?"#0a7c4f":p.w<=25?"#b8860b":"#c0392b"):CC[p.cat]||C.gray}]}>{p.cat==="TSA"&&p.w?<Text style={{fontSize:10,fontWeight:"800",color:"#fff"}}>{p.w}m</Text>:<Text style={{fontSize:14,color:"#fff"}}>{p.i}</Text>}</View><Text style={ms.pn} numberOfLines={1}>{p.n}</Text></TouchableOpacity>})}</View>
-<View style={ms.fls}>{[{id:1,l:"1",s:"Arr"},{id:2,l:"2",s:"Dep"},{id:3,l:"3",s:"Lng"}].map(function(f){return <TouchableOpacity key={f.id} style={[ms.flb,fl===f.id&&ms.fla]} onPress={function(){sFl(f.id);sSel(null);sAf("All")}}><Text style={{fontSize:14,fontWeight:"700",color:fl===f.id?C.navy:C.gray}}>{f.l}</Text><Text style={{fontSize:8,fontWeight:"600",color:fl===f.id?C.gold:"#bbb"}}>{f.s}</Text></TouchableOpacity>})}</View>
-{sel&&!rt&&<View style={ms.card}><View style={ms.ch}/><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"flex-start"}}><View style={{flex:1}}><Text style={{fontSize:18,fontWeight:"700",color:C.navy}}>{sel.n}</Text><Text style={{fontSize:13,color:C.gray,marginTop:2}}>{sel.cat} {"\u00b7"} Level {sel.fl}</Text></View></View>{sel.rt?<View style={{flexDirection:"row",alignItems:"center",gap:6,marginTop:10}}><Text style={{color:C.gold}}>{"\u2605"}</Text><Text style={{fontWeight:"600",color:C.navy}}>{sel.rt}</Text></View>:null}{sel.cat==="TSA"&&sel.w?<View style={{flexDirection:"row",alignItems:"center",gap:10,padding:10,borderRadius:12,backgroundColor:wb(sel.w),marginTop:10}}><Text style={{fontSize:22,fontWeight:"800",color:wc(sel.w)}}>{sel.w}</Text><View><Text style={{fontSize:13,fontWeight:"700",color:wc(sel.w)}}>{wl(sel.w)}</Text><Text style={{fontSize:11,color:C.gray}}>min est.</Text></View></View>:null}{sel.am&&sel.am.length>0?<View style={{flexDirection:"row",flexWrap:"wrap",gap:6,marginTop:10}}>{sel.am.map(function(a){return <View key={a} style={{paddingVertical:4,paddingHorizontal:10,borderRadius:20,backgroundColor:C.goldBg}}><Text style={{fontSize:11,fontWeight:"500",color:"#8b6914"}}>{a}</Text></View>})}</View>:null}<TouchableOpacity style={ms.nb} onPress={function(){sRt(sel);sSel(null)}}><Text style={{fontSize:15,fontWeight:"700",color:C.gold}}>Navigate here</Text></TouchableOpacity></View>}
-{rt&&<View style={ms.rb}><View style={{flexDirection:"row",alignItems:"center",gap:10}}><Text style={{fontSize:14,fontWeight:"700",color:C.white}}>To {rt.n}</Text></View><TouchableOpacity style={ms.re} onPress={function(){sRt(null)}}><Text style={{color:C.gold,fontWeight:"700",fontSize:13}}>End</Text></TouchableOpacity></View>}</View><BT act="map" nav={nav}/></View>}
-var ms=StyleSheet.create({c:{flex:1,backgroundColor:"#eae8e1"},hd:{backgroundColor:C.navy,paddingHorizontal:16,paddingTop:10,paddingBottom:12,borderBottomLeftRadius:20,borderBottomRightRadius:20,zIndex:20},bb:{width:36,height:36,borderRadius:10,backgroundColor:"rgba(255,255,255,0.08)",alignItems:"center",justifyContent:"center"},srw:{flexDirection:"row",alignItems:"center",gap:10,backgroundColor:"rgba(255,255,255,0.08)",borderRadius:12,paddingVertical:9,paddingHorizontal:14},sri:{flex:1,fontSize:14,color:C.white},fp:{paddingVertical:5,paddingHorizontal:12,borderRadius:20,borderWidth:1,borderColor:"rgba(255,255,255,0.12)",backgroundColor:"rgba(255,255,255,0.05)",marginRight:6},fpa:{backgroundColor:C.gold,borderColor:C.gold},ft:{fontSize:12,fontWeight:"500",color:"rgba(255,255,255,0.5)"},fta:{color:C.navy,fontWeight:"700"},ma:{flex:1,alignItems:"center",justifyContent:"center"},tb:{width:"92%",height:"90%",position:"absolute",left:"4%",top:"3%",borderRadius:18,borderWidth:1.5,borderColor:"rgba(12,27,46,0.12)",backgroundColor:"#f2f1ec",alignItems:"center",justifyContent:"center"},tl:{fontSize:12,color:"rgba(12,27,46,0.12)",fontWeight:"700",letterSpacing:2.5,textTransform:"uppercase"},pg:{flexDirection:"row",flexWrap:"wrap",justifyContent:"center",padding:8,gap:8,position:"absolute",top:"10%",left:10,right:10},pi:{alignItems:"center",width:72,marginBottom:4},pd:{width:40,height:40,borderRadius:20,alignItems:"center",justifyContent:"center",borderWidth:2.5,borderColor:"#fff"},pn:{fontSize:10,fontWeight:"600",color:C.navy,marginTop:3,textAlign:"center"},fls:{position:"absolute",right:12,top:"40%",backgroundColor:C.white,borderRadius:14,padding:4,elevation:4},flb:{width:44,height:44,borderRadius:10,alignItems:"center",justifyContent:"center"},fla:{backgroundColor:C.goldBg},card:{position:"absolute",bottom:0,left:0,right:0,backgroundColor:C.white,borderTopLeftRadius:22,borderTopRightRadius:22,padding:20,paddingBottom:28,zIndex:25,elevation:8},ch:{width:36,height:4,borderRadius:2,backgroundColor:C.grayLight,alignSelf:"center",marginBottom:14},nb:{paddingVertical:12,backgroundColor:C.navy,borderRadius:14,alignItems:"center",marginTop:14},rb:{position:"absolute",bottom:12,left:12,right:12,zIndex:25,backgroundColor:C.navy,borderRadius:18,padding:14,paddingHorizontal:16,flexDirection:"row",justifyContent:"space-between",alignItems:"center",elevation:6},re:{paddingVertical:8,paddingHorizontal:18,borderRadius:10,backgroundColor:"rgba(201,168,76,0.15)"}});
+  const onScroll = (e) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / (cardW + 12));
+    if (idx !== active && idx >= 0 && idx < items.length) {
+      setActive(idx);
+      clearInterval(timerRef.current);
+      startTimer();
+    }
+  };
 
-// FLIGHTS
-function Flights({nav}){var[tab,sTab]=useState("dep"),[sr,sSr]=useState(""),[sf,sSf]=useState(null),[mf,sMf]=useState(null);
-var fls=FLD.filter(function(f){return f.tp===tab&&(sr.length===0||f.fn.toLowerCase().includes(sr.toLowerCase())||f.al.toLowerCase().includes(sr.toLowerCase())||(f.dest||"").toLowerCase().includes(sr.toLowerCase())||(f.from||"").toLowerCase().includes(sr.toLowerCase()))});
-var gs=[{l:"Boarding",d:fls.filter(function(f){return f.st==="Boarding"&&f.fn!==mf})},{l:"Upcoming",d:fls.filter(function(f){return f.st==="On time"&&f.fn!==mf})},{l:"Delayed",d:fls.filter(function(f){return f.st==="Delayed"&&f.fn!==mf})},{l:"Other",d:fls.filter(function(f){return!["Boarding","On time","Delayed"].includes(f.st)&&f.fn!==mf})}].filter(function(g){return g.d.length>0});
-var pin=mf?FLD.find(function(f){return f.fn===mf}):null;
-function FR({f}){var sc2=SC[f.st]||SC["On time"];return <TouchableOpacity style={fs.row} onPress={function(){sSf(f)}}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center"}}><View style={{flexDirection:"row",alignItems:"center",gap:10}}><View style={fs.ai}><Text style={{fontSize:14,fontWeight:"700",color:C.gold}}>{f.al[0]}</Text></View><View><Text style={{fontSize:15,fontWeight:"700",color:C.navy}}>{f.fn}</Text><Text style={{fontSize:12,color:C.gray}}>{f.al}</Text></View></View><View style={[fs.bdg,{backgroundColor:sc2.bg}]}><View style={{width:6,height:6,borderRadius:3,backgroundColor:sc2.d}}/><Text style={{fontSize:11,fontWeight:"600",color:sc2.c}}>{f.st}</Text></View></View><View style={fs.meta}><View><Text style={fs.ml}>{tab==="dep"?"To":"From"}</Text><Text style={fs.mv}>{f.dest||f.from}</Text></View><View><Text style={fs.ml}>Gate</Text><Text style={fs.mv}>{f.g}</Text></View><View><Text style={fs.ml}>Time</Text><Text style={fs.mv}>{f.t}</Text></View></View></TouchableOpacity>}
-return <View style={fs.c}><StatusBar barStyle="light-content"/><View style={fs.hd}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:4,paddingTop:4}}><TouchableOpacity style={fs.bb} onPress={function(){nav("home")}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>Flight scanner</Text><View style={{width:36}}/></View><Text style={{fontSize:12,color:C.gold,fontWeight:"600",letterSpacing:1,textAlign:"center",marginBottom:12}}>{"KONT \u00b7 TODAY"}</Text><View style={fs.tr}><TouchableOpacity style={[fs.tb,tab==="dep"&&fs.tba]} onPress={function(){sTab("dep");sSr("")}}><Text style={[fs.tt,tab==="dep"&&fs.tta]}>Departures</Text></TouchableOpacity><TouchableOpacity style={[fs.tb,tab==="arr"&&fs.tba]} onPress={function(){sTab("arr");sSr("")}}><Text style={[fs.tt,tab==="arr"&&fs.tta]}>Arrivals</Text></TouchableOpacity></View><View style={fs.srw}><Text style={{fontSize:14,color:"rgba(255,255,255,0.4)"}}>{"\ud83d\udd0d"}</Text><TextInput style={fs.sri} placeholder="Search flight, airline..." placeholderTextColor="rgba(255,255,255,0.3)" value={sr} onChangeText={sSr}/></View></View>
-<ScrollView style={{flex:1,paddingHorizontal:16}}>{pin&&!sr?<View style={[fs.row,{borderLeftWidth:3,borderLeftColor:C.gold,backgroundColor:C.goldBg,marginTop:14}]}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center"}}><View style={{flexDirection:"row",alignItems:"center",gap:10}}><View style={fs.ai}><Text style={{fontSize:14,fontWeight:"700",color:C.gold}}>{pin.al[0]}</Text></View><View><View style={{flexDirection:"row",alignItems:"center",gap:6}}><Text style={{fontSize:15,fontWeight:"700",color:C.navy}}>{pin.fn}</Text><View style={{backgroundColor:C.white,paddingHorizontal:6,paddingVertical:2,borderRadius:6}}><Text style={{fontSize:9,fontWeight:"700",color:C.gold}}>MY FLIGHT</Text></View></View><Text style={{fontSize:12,color:C.gray}}>{pin.al}</Text></View></View></View><View style={{flexDirection:"row",gap:8,marginTop:10}}><TouchableOpacity style={{flex:1,paddingVertical:7,borderRadius:8,backgroundColor:C.navy,alignItems:"center"}}><Text style={{fontSize:11,fontWeight:"700",color:C.gold}}>Navigate</Text></TouchableOpacity><TouchableOpacity style={{flex:1,paddingVertical:7,borderRadius:8,borderWidth:1,borderColor:C.grayLight,alignItems:"center"}} onPress={function(){sMf(null)}}><Text style={{fontSize:11,fontWeight:"600",color:C.navy}}>Remove</Text></TouchableOpacity></View></View>:null}
-{gs.map(function(g){return <View key={g.l}><Text style={fs.sl}>{g.l}</Text>{g.d.map(function(f){return <FR key={f.fn} f={f}/>})}</View>})}<View style={{height:20}}/></ScrollView>
-{sf?<TouchableOpacity style={fs.ov} activeOpacity={1} onPress={function(){sSf(null)}}><View style={fs.sh}><View style={fs.handle}/><Text style={{fontSize:22,fontWeight:"800",color:C.navy}}>{sf.fn}</Text><Text style={{fontSize:13,color:C.gray,marginBottom:16}}>{sf.al}</Text><View style={{flexDirection:"row",gap:8}}><TouchableOpacity style={{flex:1,paddingVertical:12,borderRadius:12,backgroundColor:C.navy,alignItems:"center"}} onPress={function(){sMf(sf.fn);sSf(null)}}><Text style={{fontSize:14,fontWeight:"700",color:C.gold}}>Set as my flight</Text></TouchableOpacity><TouchableOpacity style={{flex:1,paddingVertical:12,borderRadius:12,borderWidth:1.5,borderColor:C.grayLight,alignItems:"center"}}><Text style={{fontSize:14,fontWeight:"600",color:C.navy}}>Navigate to gate</Text></TouchableOpacity></View></View></TouchableOpacity>:null}<BT act="flights" nav={nav}/></View>}
-var fs=StyleSheet.create({c:{flex:1,backgroundColor:C.bg},hd:{backgroundColor:C.navy,padding:16,paddingTop:10,borderBottomLeftRadius:20,borderBottomRightRadius:20,zIndex:10},bb:{width:36,height:36,borderRadius:10,backgroundColor:"rgba(255,255,255,0.08)",alignItems:"center",justifyContent:"center"},tr:{flexDirection:"row",gap:4,backgroundColor:"rgba(255,255,255,0.06)",borderRadius:12,padding:3,marginBottom:10},tb:{flex:1,paddingVertical:8,borderRadius:10,alignItems:"center"},tba:{backgroundColor:C.gold},tt:{fontSize:13,fontWeight:"600",color:"rgba(255,255,255,0.4)"},tta:{color:C.navy,fontWeight:"700"},srw:{flexDirection:"row",alignItems:"center",gap:10,backgroundColor:"rgba(255,255,255,0.08)",borderRadius:12,paddingVertical:9,paddingHorizontal:14},sri:{flex:1,fontSize:14,color:C.white},row:{backgroundColor:C.white,borderRadius:14,padding:14,marginBottom:8,elevation:1},ai:{width:32,height:32,borderRadius:8,backgroundColor:C.navyLight,alignItems:"center",justifyContent:"center"},bdg:{flexDirection:"row",alignItems:"center",gap:5,paddingVertical:4,paddingHorizontal:10,borderRadius:8},meta:{flexDirection:"row",justifyContent:"space-between",marginTop:10,paddingTop:10,borderTopWidth:1,borderTopColor:C.grayLight},ml:{fontSize:10,color:C.gray,fontWeight:"500"},mv:{fontSize:13,fontWeight:"600",color:C.navy},sl:{fontSize:11,fontWeight:"700",color:C.gray,textTransform:"uppercase",letterSpacing:1.2,marginTop:18,marginBottom:8},ov:{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundColor:"rgba(12,27,46,0.5)",justifyContent:"flex-end",zIndex:50},sh:{backgroundColor:C.white,borderTopLeftRadius:22,borderTopRightRadius:22,padding:20,paddingBottom:28},handle:{width:36,height:4,borderRadius:2,backgroundColor:C.grayLight,alignSelf:"center",marginBottom:14}});
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <FlatList
+        ref={flatRef}
+        data={items}
+        horizontal
+        pagingEnabled={false}
+        snapToInterval={cardW + 12}
+        decelerationRate="fast"
+        showsHorizontalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        keyExtractor={(_, i) => String(i)}
+        renderItem={({ item }) => (
+          <View style={{ width: cardW, marginRight: 12, borderRadius: 16, overflow: "hidden", backgroundColor: item.bg || C.navyLight }}>
+            <View style={{ padding: 20, minHeight: 110, justifyContent: "flex-end" }}>
+              <Text style={{ fontSize: 13, color: item.tagColor || C.gold, fontWeight: "700", marginBottom: 4 }}>{item.tag}</Text>
+              <Text style={{ fontSize: 17, color: C.white, fontWeight: "800", marginBottom: 4 }}>{item.title}</Text>
+              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>{item.subtitle}</Text>
+            </View>
+          </View>
+        )}
+      />
+      <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 10, gap: 6 }}>
+        {items.map((_, i) => (
+          <View key={i} style={{ width: active === i ? 18 : 6, height: 6, borderRadius: 3, backgroundColor: active === i ? C.gold : C.grayLight }} />
+        ))}
+      </View>
+    </View>
+  );
+}
 
-// TSA
-function TSA({nav}){var[ex,sEx]=useState(null),[tips,sTips]=useState(false),[rc,sRc]=useState(null),[rv,sRv]=useState(15),[dn,sDn]=useState(false);
-function sub(){sDn(true);setTimeout(function(){sDn(false);sRc(null);sRv(15)},1500)}
-return <View style={ts.c}><StatusBar barStyle="light-content"/><View style={ts.hd}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:6,paddingTop:4}}><TouchableOpacity style={ts.bb} onPress={function(){nav("home")}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>TSA wait times</Text><View style={{width:36}}/></View><Text style={{fontSize:12,color:C.gold,fontWeight:"600",letterSpacing:1,textAlign:"center"}}>{"KONT \u00b7 LIVE"}</Text></View>
-<ScrollView style={{flex:1}}><TouchableOpacity style={ts.tipH} onPress={function(){sTips(!tips)}}><View style={{flexDirection:"row",alignItems:"center",gap:8}}><View style={ts.tipI}><Text style={{fontSize:14}}>{"\ud83d\udca1"}</Text></View><Text style={{fontSize:14,fontWeight:"700",color:C.navy}}>Tips for faster screening</Text></View><Text style={{fontSize:16,color:C.gray}}>{tips?"\u25b4":"\u25be"}</Text></TouchableOpacity>
-{tips?<View style={ts.tipB}>{["Have ID ready","Remove laptops/liquids","Easy-to-remove shoes","Consider PreCheck"].map(function(t,i){return <View key={i} style={ts.tipR}><View style={ts.tipBl}><Text style={{fontSize:11,fontWeight:"700",color:"#8b6914"}}>{i+1}</Text></View><Text style={{fontSize:13,color:C.navy}}>{t}</Text></View>})}</View>:null}
-<View style={ts.sum}><View style={ts.si2}><Text style={{fontSize:11,color:C.gray}}>Avg.</Text><Text style={{fontSize:20,fontWeight:"800",color:C.navy}}>{Math.round((TSAD[0].w+TSAD[1].w)/2)}m</Text></View><View style={{width:1,height:32,backgroundColor:C.grayLight}}/><View style={ts.si2}><Text style={{fontSize:11,color:C.gray}}>Reports</Text><Text style={{fontSize:20,fontWeight:"800",color:C.navy}}>{TSAD[0].rp+TSAD[1].rp}</Text></View></View>
-<View style={{paddingHorizontal:16}}><Text style={ts.sl}>Checkpoints</Text>{TSAD.map(function(cp){var o=ex===cp.id;return <View key={cp.id} style={ts.cpC}><TouchableOpacity style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center"}} onPress={function(){sEx(o?null:cp.id)}}><View style={{flexDirection:"row",gap:12,alignItems:"center"}}><View style={[ts.wb2,{backgroundColor:wb(cp.w)}]}><Text style={{fontSize:18,fontWeight:"800",color:wc(cp.w)}}>{cp.w}</Text><Text style={{fontSize:9,fontWeight:"600",color:wc(cp.w)}}>min</Text></View><View><Text style={{fontSize:15,fontWeight:"700",color:C.navy}}>{cp.n}</Text><Text style={{fontSize:12,fontWeight:"600",color:wc(cp.w)}}>{wl(cp.w)}</Text></View></View><Text style={{fontSize:18,color:C.gray}}>{o?"\u25b4":"\u25be"}</Text></TouchableOpacity>
-{o?<View style={{marginTop:14,borderTopWidth:1,borderTopColor:C.grayLight,paddingTop:14}}><Text style={{fontSize:12,color:C.gray,marginBottom:10}}>{cp.loc} {"\u00b7"} {cp.hr}</Text><View style={{flexDirection:"row",gap:6,marginBottom:10}}>{cp.ln.map(function(l){return <View key={l} style={{paddingVertical:4,paddingHorizontal:10,borderRadius:20,backgroundColor:C.goldBg}}><Text style={{fontSize:11,fontWeight:"500",color:"#8b6914"}}>{l}</Text></View>})}</View><View style={{flexDirection:"row",gap:8}}><TouchableOpacity style={ts.rpb} onPress={function(){sRc(cp)}}><Text style={{fontSize:13,fontWeight:"600",color:C.navy}}>Report</Text></TouchableOpacity><TouchableOpacity style={ts.nvb}><Text style={{fontSize:13,fontWeight:"700",color:C.gold}}>Navigate</Text></TouchableOpacity></View></View>:null}</View>})}</View><View style={{height:20}}/></ScrollView>
-{rc?<TouchableOpacity style={ts.ov} activeOpacity={1} onPress={function(){sRc(null);sDn(false)}}><View style={ts.sh2}><View style={{width:36,height:4,borderRadius:2,backgroundColor:C.grayLight,alignSelf:"center",marginBottom:14}}/>{dn?<View style={{alignItems:"center",paddingVertical:20}}><Text style={{fontSize:24}}>{"\u2713"}</Text><Text style={{fontSize:18,fontWeight:"700",color:C.navy,marginTop:8}}>Thanks!</Text></View>:<View><Text style={{fontSize:18,fontWeight:"700",color:C.navy,marginBottom:20}}>{rc.n}</Text><Text style={{textAlign:"center",fontSize:48,fontWeight:"800",color:wc(rv)}}>{rv}<Text style={{fontSize:18,color:C.gray}}> min</Text></Text><View style={{flexDirection:"row",gap:6,marginVertical:16}}>{[5,10,15,20,30,45].map(function(v){return <TouchableOpacity key={v} style={[ts.qb,rv===v&&{backgroundColor:C.navy,borderColor:C.navy}]} onPress={function(){sRv(v)}}><Text style={[{fontSize:12,fontWeight:"600",color:C.navy},rv===v&&{color:C.gold}]}>{v}m</Text></TouchableOpacity>})}</View><View style={{flexDirection:"row",gap:8}}><TouchableOpacity style={{flex:1,paddingVertical:12,borderRadius:12,borderWidth:1.5,borderColor:C.grayLight,alignItems:"center"}} onPress={function(){sRc(null)}}><Text style={{fontSize:14,fontWeight:"600",color:C.navy}}>Cancel</Text></TouchableOpacity><TouchableOpacity style={{flex:1,paddingVertical:12,borderRadius:12,backgroundColor:C.navy,alignItems:"center"}} onPress={sub}><Text style={{fontSize:14,fontWeight:"700",color:C.gold}}>Submit</Text></TouchableOpacity></View></View>}</View></TouchableOpacity>:null}<BT act="home" nav={nav}/></View>}
-var ts=StyleSheet.create({c:{flex:1,backgroundColor:C.bg},hd:{backgroundColor:C.navy,padding:16,paddingTop:10,borderBottomLeftRadius:20,borderBottomRightRadius:20,zIndex:10},bb:{width:36,height:36,borderRadius:10,backgroundColor:"rgba(255,255,255,0.08)",alignItems:"center",justifyContent:"center"},tipH:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",backgroundColor:C.white,borderRadius:14,padding:12,marginHorizontal:16,marginTop:14,elevation:1},tipI:{width:28,height:28,borderRadius:8,backgroundColor:C.goldBg,alignItems:"center",justifyContent:"center"},tipB:{backgroundColor:C.white,borderBottomLeftRadius:14,borderBottomRightRadius:14,paddingHorizontal:14,paddingBottom:14,marginHorizontal:16,marginTop:-4},tipR:{flexDirection:"row",alignItems:"center",gap:10,marginBottom:8},tipBl:{width:22,height:22,borderRadius:11,backgroundColor:C.goldBg,alignItems:"center",justifyContent:"center"},sum:{flexDirection:"row",justifyContent:"space-around",alignItems:"center",backgroundColor:C.white,marginHorizontal:16,marginTop:12,borderRadius:16,paddingVertical:14,elevation:1},si2:{alignItems:"center",gap:2},sl:{fontSize:11,fontWeight:"700",color:C.gray,textTransform:"uppercase",letterSpacing:1.2,marginTop:20,marginBottom:10},cpC:{backgroundColor:C.white,borderRadius:18,padding:16,marginBottom:10,elevation:1},wb2:{width:48,height:48,borderRadius:14,alignItems:"center",justifyContent:"center"},rpb:{flex:1,paddingVertical:10,borderRadius:12,borderWidth:1.5,borderColor:C.grayLight,alignItems:"center"},nvb:{flex:1,paddingVertical:10,borderRadius:12,backgroundColor:C.navy,alignItems:"center"},ov:{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundColor:"rgba(12,27,46,0.5)",justifyContent:"flex-end",zIndex:50},sh2:{backgroundColor:C.white,borderTopLeftRadius:22,borderTopRightRadius:22,padding:20,paddingBottom:28},qb:{flex:1,paddingVertical:8,borderRadius:10,borderWidth:1.5,borderColor:C.grayLight,alignItems:"center"}});
+// ============ WELCOME SCREEN ============
+function Welcome({ onLogin }) {
+  const [authPage, setAuthPage] = useState("main");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
 
-// WALLET
-function Wallet({nav}){var[exC,sExC]=useState(null),[hiO,sHiO]=useState(false),[lpO,sLpO]=useState(null),[pkO,sPkO]=useState(null);
-return <View style={wt.c}><StatusBar barStyle="light-content"/><View style={wt.hd}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingTop:4}}><TouchableOpacity style={wt.bb} onPress={function(){nav("home")}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>My wallet</Text><View style={{width:36}}/></View><Text style={{fontSize:12,color:C.gold,fontWeight:"600",letterSpacing:1,textAlign:"center",marginTop:6}}>PAYMENT & PERKS</Text></View>
-<ScrollView style={{flex:1}}>
-<View style={{padding:16,paddingBottom:0}}><Text style={wt.sl}>Lounge access at ONT</Text><View style={wt.laC}><View style={{flexDirection:"row",alignItems:"center",gap:10}}><View style={{width:40,height:40,borderRadius:12,backgroundColor:"#e6f9f0",alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:18}}>{"\ud83d\udecb"}</Text></View><View><Text style={{fontSize:15,fontWeight:"700",color:C.navy}}>Escape Lounge</Text><Text style={{fontSize:11,color:C.gray}}>Terminal 2, Level 3</Text></View></View><View style={{backgroundColor:"#e6f9f0",paddingHorizontal:10,paddingVertical:4,borderRadius:8,marginTop:8,alignSelf:"flex-start"}}><Text style={{fontSize:10,fontWeight:"700",color:"#0a7c4f"}}>ACCESS GRANTED</Text></View></View></View>
-<View style={{padding:16,paddingBottom:0}}><Text style={wt.sl}>Quick pay</Text><View style={{flexDirection:"row",gap:8}}><View style={wt.qp}><Text style={{fontSize:22}}>{"\ud83c\udf4e"}</Text><Text style={{fontSize:11,fontWeight:"600",color:C.navy}}>Apple Pay</Text><Text style={{fontSize:10,color:"#0a7c4f",fontWeight:"600"}}>Active</Text></View><View style={wt.qp}><Text style={{fontSize:22}}>{"\ud83d\udd35"}</Text><Text style={{fontSize:11,fontWeight:"600",color:C.navy}}>Google Pay</Text><Text style={{fontSize:10,color:C.gray}}>Set up</Text></View></View></View>
-<View style={{padding:16,paddingBottom:0}}><Text style={wt.sl}>Saved cards</Text>{WCARDS.map(function(cd){var isEx=exC===cd.id;return <View key={cd.id} style={{marginBottom:10}}><TouchableOpacity style={[wt.cMin,{backgroundColor:cd.co}]} onPress={function(){sExC(isEx?null:cd.id);sLpO(null);sPkO(null)}}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center"}}><View style={{flexDirection:"row",alignItems:"center",gap:12}}><View style={{width:42,height:28,borderRadius:6,backgroundColor:cd.ac+"30",alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:9,fontWeight:"800",color:cd.ac}}>{cd.br}</Text></View><View><Text style={{fontSize:14,fontWeight:"700",color:C.white}}>{cd.n}</Text><Text style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>{"•••• "+cd.l4}</Text></View></View><View style={{flexDirection:"row",alignItems:"center",gap:8}}><View style={{backgroundColor:"rgba(10,124,79,0.15)",paddingHorizontal:8,paddingVertical:3,borderRadius:6}}><Text style={{fontSize:10,fontWeight:"600",color:"#0a7c4f"}}>Lounge</Text></View><Text style={{fontSize:16,color:"rgba(255,255,255,0.3)"}}>{isEx?"\u25b4":"\u25be"}</Text></View></View></TouchableOpacity>
-{isEx&&<View style={wt.cExp}><View style={{alignItems:"center",paddingVertical:16,borderBottomWidth:1,borderBottomColor:C.grayLight,marginBottom:12}}><View style={{width:140,height:140,borderRadius:12,backgroundColor:C.navy,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:11,color:C.gold,fontWeight:"600"}}>QR CODE</Text><Text style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginTop:4}}>{cd.n}</Text><Text style={{fontSize:9,color:"rgba(255,255,255,0.4)"}}>{"•••• "+cd.l4}</Text></View><Text style={{fontSize:12,fontWeight:"600",color:C.navy,marginTop:10}}>Show to lounge staff</Text><View style={{backgroundColor:"#e6f9f0",paddingHorizontal:10,paddingVertical:3,borderRadius:6,marginTop:6}}><Text style={{fontSize:10,fontWeight:"600",color:"#0a7c4f"}}>Escape Lounge</Text></View></View>
-<TouchableOpacity style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingVertical:10}} onPress={function(){sLpO(lpO===cd.id?null:cd.id)}}><Text style={{fontSize:11,fontWeight:"700",color:C.gray,textTransform:"uppercase",letterSpacing:1}}>Lounge access</Text><Text style={{fontSize:14,color:C.gray}}>{lpO===cd.id?"\u25b4":"\u25be"}</Text></TouchableOpacity>
-{lpO===cd.id&&<View style={{paddingBottom:8}}>{cd.lg.map(function(l){return <View key={l} style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingVertical:8,borderBottomWidth:1,borderBottomColor:C.grayLight}}><View style={{flexDirection:"row",alignItems:"center",gap:8}}><Text style={{fontSize:12,color:"#0a7c4f"}}>{"\u2713"}</Text><Text style={{fontSize:13,color:C.navy}}>{l}</Text></View><View style={{backgroundColor:"#e6f9f0",paddingHorizontal:8,paddingVertical:2,borderRadius:6}}><Text style={{fontSize:10,fontWeight:"600",color:"#0a7c4f"}}>At ONT</Text></View></View>})}</View>}
-<TouchableOpacity style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingVertical:10}} onPress={function(){sPkO(pkO===cd.id?null:cd.id)}}><Text style={{fontSize:11,fontWeight:"700",color:C.gray,textTransform:"uppercase",letterSpacing:1}}>Card perks</Text><Text style={{fontSize:14,color:C.gray}}>{pkO===cd.id?"\u25b4":"\u25be"}</Text></TouchableOpacity>
-{pkO===cd.id&&<View style={{paddingBottom:8}}>{cd.pk.map(function(p){return <View key={p} style={{flexDirection:"row",alignItems:"center",gap:8,paddingVertical:6}}><Text style={{fontSize:12,color:C.gold}}>{"\u2605"}</Text><Text style={{fontSize:13,color:C.navy}}>{p}</Text></View>})}</View>}
-<View style={{flexDirection:"row",gap:8,marginTop:8}}><TouchableOpacity style={{flex:1,paddingVertical:9,borderRadius:10,backgroundColor:C.navy,alignItems:"center"}}><Text style={{fontSize:12,fontWeight:"700",color:C.gold}}>Set default</Text></TouchableOpacity><TouchableOpacity style={{flex:1,paddingVertical:9,borderRadius:10,borderWidth:1.5,borderColor:C.grayLight,alignItems:"center"}}><Text style={{fontSize:12,fontWeight:"600",color:C.gray}}>Remove</Text></TouchableOpacity></View></View>}</View>})}</View>
-<View style={{padding:16,paddingBottom:0}}><TouchableOpacity style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",backgroundColor:C.white,borderRadius:14,padding:12,elevation:1}} onPress={function(){sHiO(!hiO)}}><View style={{flexDirection:"row",alignItems:"center",gap:8}}><Text style={{fontSize:16}}>{"\ud83d\udcc4"}</Text><Text style={{fontSize:14,fontWeight:"700",color:C.navy}}>Payment history</Text><View style={{backgroundColor:C.gold,borderRadius:10,paddingHorizontal:7,paddingVertical:2}}><Text style={{fontSize:10,fontWeight:"700",color:C.white}}>{PHIST.filter(function(h){return h.dt.startsWith("Mar")}).length}</Text></View></View><Text style={{fontSize:16,color:C.gray}}>{hiO?"\u25b4":"\u25be"}</Text></TouchableOpacity>
-{hiO&&<View style={{backgroundColor:C.white,borderBottomLeftRadius:14,borderBottomRightRadius:14,paddingHorizontal:14,paddingBottom:10,marginTop:-4}}>{PHIST.map(function(h){return <View key={h.id} style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingVertical:12,borderBottomWidth:1,borderBottomColor:C.grayLight}}><View style={{flexDirection:"row",gap:12,alignItems:"center"}}><View style={{width:38,height:38,borderRadius:10,backgroundColor:C.goldBg,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:16}}>{h.i}</Text></View><View><Text style={{fontSize:13,fontWeight:"600",color:C.navy}}>{h.d}</Text><Text style={{fontSize:11,color:C.gray,marginTop:2}}>{h.cd} {"\u00b7"} {h.dt}</Text></View></View><Text style={{fontSize:14,fontWeight:"700",color:C.navy}}>{h.a}</Text></View>})}</View>}</View>
-<View style={{height:30}}/></ScrollView><BT act="home" nav={nav}/></View>}
-var wt=StyleSheet.create({c:{flex:1,backgroundColor:C.bg},hd:{backgroundColor:C.navy,padding:16,paddingTop:10,paddingBottom:16},bb:{width:36,height:36,borderRadius:10,backgroundColor:"rgba(255,255,255,0.08)",alignItems:"center",justifyContent:"center"},sl:{fontSize:11,fontWeight:"700",color:C.gray,textTransform:"uppercase",letterSpacing:1.2,marginBottom:8},laC:{backgroundColor:C.white,borderRadius:14,padding:14,borderWidth:1.5,borderColor:"#d4edda",elevation:1},qp:{flex:1,backgroundColor:C.white,borderRadius:14,paddingVertical:14,alignItems:"center",gap:4,elevation:1},cMin:{borderRadius:16,padding:14,paddingHorizontal:16},cExp:{backgroundColor:C.white,borderBottomLeftRadius:16,borderBottomRightRadius:16,paddingHorizontal:16,paddingBottom:16,marginTop:-4}});
+  if (authPage === "signup") return (
+    <View style={ws.container}>
+      <TopSpacer />
+      <StatusBar barStyle="light-content" />
+      <View style={ws.inner}>
+        <View style={ws.header}>
+          <Text style={ws.bigIcon}>✈️</Text>
+          <Text style={ws.title}>Create Account</Text>
+          <Text style={ws.subtitle}>Join ONT Navigator</Text>
+        </View>
+        <TextInput style={ws.input} placeholder="Full name" placeholderTextColor={C.gray} value={name} onChangeText={setName} />
+        <Text style={ws.hint}>e.g. Alex Rivera</Text>
+        <TextInput style={ws.input} placeholder="Email address" placeholderTextColor={C.gray} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+        <TextInput style={ws.input} placeholder="Your password" placeholderTextColor={C.gray} value={password} onChangeText={setPassword} secureTextEntry />
+        <Text style={ws.hint}>6+ characters</Text>
+        <TouchableOpacity style={ws.btnGold} onPress={onLogin}><Text style={ws.btnGoldText}>Sign Up</Text></TouchableOpacity>
+        <View style={ws.switchRow}>
+          <Text style={ws.switchText}>Already have an account? </Text>
+          <TouchableOpacity onPress={() => setAuthPage("login")}><Text style={ws.switchLink}>Log in</Text></TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
-// DUTY FREE
-function DutyFree({nav}){var[ac,sAc]=useState("all"),[sr,sSr]=useState(""),[fvs,sFvs]=useState([]),[pos,sPOs]=useState([]),[sp,sSp]=useState(null),[aPr,sAPr]=useState(0);
-var prT=useRef(null);
-useEffect(function(){prT.current=setInterval(function(){sAPr(function(p){return(p+1)%DFPROMOS.length})},4000);return function(){clearInterval(prT.current)}},[]);
-var fil=DFPRODS.filter(function(p){var mc=ac==="all"||p.ct===ac;var ms2=sr.length===0||p.n.toLowerCase().includes(sr.toLowerCase())||p.br.toLowerCase().includes(sr.toLowerCase());return mc&&ms2});
-if(sp){var iF=fvs.includes(sp.id),iO=pos.includes(sp.id);
-return <View style={df.c}><View style={df.hd}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingTop:4}}><TouchableOpacity style={df.bb} onPress={function(){sSp(null)}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>Details</Text><TouchableOpacity style={df.bb} onPress={function(){sFvs(function(p){return p.includes(sp.id)?p.filter(function(i){return i!==sp.id}):[].concat(p,[sp.id])})}}><Text style={{fontSize:16,color:iF?"#e74c3c":"rgba(255,255,255,0.4)"}}>{iF?"\u2665":"\u2661"}</Text></TouchableOpacity></View></View>
-<ScrollView style={{flex:1,padding:16}}><View style={{width:"100%",height:200,borderRadius:20,backgroundColor:C.white,alignItems:"center",justifyContent:"center",elevation:2}}><Text style={{fontSize:72}}>{sp.i}</Text></View>{sp.ex&&<View style={{backgroundColor:C.goldBg,paddingHorizontal:12,paddingVertical:4,borderRadius:8,alignSelf:"flex-start",marginTop:14}}><Text style={{fontSize:11,fontWeight:"700",color:"#8b6914"}}>ONT EXCLUSIVE</Text></View>}<Text style={{fontSize:22,fontWeight:"800",color:C.navy,marginTop:10}}>{sp.n}</Text><Text style={{fontSize:14,color:C.gray,marginTop:2}}>{sp.br}</Text>
-<View style={{flexDirection:"row",alignItems:"baseline",gap:10,marginTop:14}}><Text style={{fontSize:28,fontWeight:"800",color:C.navy}}>{sp.p}</Text>{sp.o&&<Text style={{fontSize:15,color:C.gray,textDecorationLine:"line-through"}}>{sp.o}</Text>}{sp.sv&&<View style={{backgroundColor:"#e6f9f0",paddingHorizontal:10,paddingVertical:3,borderRadius:8}}><Text style={{fontSize:13,fontWeight:"700",color:"#0a7c4f"}}>Save {sp.sv}</Text></View>}</View>
-<View style={{marginTop:20,padding:14,backgroundColor:C.white,borderRadius:14,elevation:1}}><Text style={{fontSize:11,fontWeight:"700",color:C.gray,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Pickup info</Text><Text style={{fontSize:13,color:C.navy,marginBottom:6}}>{"\ud83d\udccd"} ONT Duty-Free {"\u00b7"} Terminal 2</Text><Text style={{fontSize:13,color:C.navy}}>{"\ud83d\udd50"} 5:00 AM \u2013 9:00 PM daily</Text></View>
-<TouchableOpacity style={{width:"100%",paddingVertical:14,borderRadius:14,backgroundColor:iO?"#e6f9f0":C.navy,alignItems:"center",marginTop:16}} onPress={function(){sPOs(function(p){return p.includes(sp.id)?p.filter(function(i){return i!==sp.id}):[].concat(p,[sp.id])})}}><Text style={{fontSize:15,fontWeight:"700",color:iO?"#0a7c4f":C.gold}}>{iO?"\u2713 Pre-ordered":"Pre-order for pickup"}</Text></TouchableOpacity></ScrollView><BT act="home" nav={nav}/></View>}
-return <View style={df.c}><StatusBar barStyle="light-content"/><View style={df.hd}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:10,paddingTop:4}}><TouchableOpacity style={df.bb} onPress={function(){nav("home")}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>Duty-Free</Text><View style={{flexDirection:"row",gap:8}}><View style={[df.bb,{position:"relative"}]}><Text style={{fontSize:16,color:C.gold}}>{"\u2665"}</Text>{fvs.length>0&&<View style={{position:"absolute",top:-4,right:-4,width:16,height:16,borderRadius:8,backgroundColor:"#e74c3c",alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:8,fontWeight:"700",color:C.white}}>{fvs.length}</Text></View>}</View></View></View>
-<View style={{flexDirection:"row",alignItems:"center",gap:10,backgroundColor:"rgba(255,255,255,0.08)",borderRadius:12,paddingVertical:9,paddingHorizontal:14}}><Text style={{fontSize:14,color:"rgba(255,255,255,0.4)"}}>{"\ud83d\udd0d"}</Text><TextInput style={{flex:1,fontSize:14,color:C.white}} placeholder="Search products..." placeholderTextColor="rgba(255,255,255,0.3)" value={sr} onChangeText={sSr}/></View></View>
-<ScrollView style={{flex:1}}>
-<View style={{padding:12,paddingHorizontal:16}}><View style={{flexDirection:"row",flexWrap:"wrap",gap:6,justifyContent:"center"}}>{DFCATS.slice(0,5).map(function(ct){return <TouchableOpacity key={ct.id} style={[df.chip,ac===ct.id&&df.chipA]} onPress={function(){sAc(ct.id);sSr("")}}><Text style={{fontSize:14}}>{ct.i}</Text><Text style={{fontSize:10,fontWeight:"600",color:ac===ct.id?C.navy:C.gray}}>{ct.n}</Text></TouchableOpacity>})}</View><View style={{flexDirection:"row",flexWrap:"wrap",gap:6,justifyContent:"center",marginTop:6}}>{DFCATS.slice(5).map(function(ct){return <TouchableOpacity key={ct.id} style={[df.chip,ac===ct.id&&df.chipA]} onPress={function(){sAc(ct.id);sSr("")}}><Text style={{fontSize:14}}>{ct.i}</Text><Text style={{fontSize:10,fontWeight:"600",color:ac===ct.id?C.navy:C.gray}}>{ct.n}</Text></TouchableOpacity>})}</View></View>
-{ac==="all"&&sr.length===0&&<View style={{paddingHorizontal:16,paddingBottom:12,overflow:"hidden"}}><View style={{flexDirection:"row",transform:[{translateX:-aPr*100+"%"}],transition:"transform 0.4s"}}>{DFPROMOS.map(function(p){return <View key={p.id} style={[df.pCard,{backgroundColor:p.bg}]}><Text style={{fontSize:14,fontWeight:"800",color:C.white,marginBottom:3}}>{p.t}</Text><Text style={{fontSize:11,color:p.ac}}>{p.s}</Text></View>})}</View><View style={{flexDirection:"row",justifyContent:"center",gap:4,marginTop:8}}>{DFPROMOS.map(function(_,i){return <View key={i} style={{width:i===aPr?14:5,height:5,borderRadius:3,backgroundColor:i===aPr?C.gold:C.grayLight}}/>})}</View></View>}
-<View style={{flexDirection:"row",flexWrap:"wrap",gap:10,paddingHorizontal:16}}>{fil.map(function(p){var iF=fvs.includes(p.id);return <TouchableOpacity key={p.id} style={df.prd} onPress={function(){sSp(p)}}><View style={df.pImg}><Text style={{fontSize:36}}>{p.i}</Text><TouchableOpacity style={df.hrt} onPress={function(e){sFvs(function(prev){return prev.includes(p.id)?prev.filter(function(i){return i!==p.id}):[].concat(prev,[p.id])})}}><Text style={{fontSize:14,color:iF?"#e74c3c":C.grayLight}}>{iF?"\u2665":"\u2661"}</Text></TouchableOpacity>{p.ex&&<View style={df.exTag}><Text style={{fontSize:8,fontWeight:"700",color:"#8b6914"}}>EXCLUSIVE</Text></View>}{p.sv&&<View style={df.svTag}><Text style={{fontSize:9,fontWeight:"700",color:"#0a7c4f"}}>-{p.sv}</Text></View>}</View><View style={{padding:8,paddingHorizontal:10}}><Text style={{fontSize:12,fontWeight:"700",color:C.navy,lineHeight:16}}>{p.n}</Text><Text style={{fontSize:10,color:C.gray,marginTop:2}}>{p.br}</Text><View style={{flexDirection:"row",alignItems:"center",gap:6,marginTop:6}}><Text style={{fontSize:14,fontWeight:"800",color:C.navy}}>{p.p}</Text>{p.o&&<Text style={{fontSize:10,color:C.gray,textDecorationLine:"line-through"}}>{p.o}</Text>}</View></View></TouchableOpacity>})}</View>
-{fil.length===0&&<View style={{alignItems:"center",padding:40}}><Text style={{fontSize:36,marginBottom:8}}>{"\ud83d\udd0d"}</Text><Text style={{fontSize:15,fontWeight:"600",color:C.navy}}>No products found</Text></View>}
-<View style={{height:20}}/></ScrollView><BT act="home" nav={nav}/></View>}
-var df=StyleSheet.create({c:{flex:1,backgroundColor:C.bg},hd:{backgroundColor:C.navy,paddingHorizontal:16,paddingTop:10,paddingBottom:14},bb:{width:36,height:36,borderRadius:10,backgroundColor:"rgba(255,255,255,0.08)",alignItems:"center",justifyContent:"center"},chip:{flexDirection:"column",alignItems:"center",gap:3,paddingVertical:8,paddingHorizontal:6,borderRadius:12,backgroundColor:C.white,flex:1,elevation:1},chipA:{backgroundColor:C.goldBg,borderWidth:1.5,borderColor:C.gold},pCard:{borderRadius:14,padding:14,width:"100%"},prd:{backgroundColor:C.white,borderRadius:16,overflow:"hidden",width:(SW-42)/2,elevation:1},pImg:{width:"100%",height:120,backgroundColor:C.bg,alignItems:"center",justifyContent:"center",position:"relative"},hrt:{position:"absolute",top:8,right:8,width:28,height:28,borderRadius:14,backgroundColor:C.white,alignItems:"center",justifyContent:"center",elevation:2},exTag:{position:"absolute",top:8,left:8,paddingVertical:3,paddingHorizontal:8,borderRadius:6,backgroundColor:C.goldBg},svTag:{position:"absolute",bottom:8,left:8,paddingVertical:2,paddingHorizontal:8,borderRadius:6,backgroundColor:"#e6f9f0"}});
+  if (authPage === "login") return (
+    <View style={ws.container}>
+      <TopSpacer />
+      <StatusBar barStyle="light-content" />
+      <View style={ws.inner}>
+        <View style={ws.header}>
+          <Text style={ws.bigIcon}>✈️</Text>
+          <Text style={ws.title}>Welcome Back</Text>
+          <Text style={ws.subtitle}>Log in to ONT Navigator</Text>
+        </View>
+        <TextInput style={ws.input} placeholder="Email address" placeholderTextColor={C.gray} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+        <TextInput style={ws.input} placeholder="Password" placeholderTextColor={C.gray} value={password} onChangeText={setPassword} secureTextEntry />
+        <TouchableOpacity style={ws.btnGold} onPress={onLogin}><Text style={ws.btnGoldText}>Log In</Text></TouchableOpacity>
+        <View style={ws.switchRow}>
+          <Text style={ws.switchText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => setAuthPage("signup")}><Text style={ws.switchLink}>Sign up</Text></TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
-// PROFILE
-function Profile({nav}){var[sp,sSp]=useState(null);
-if(sp==="rewards")return <View style={pf.c}><View style={pf.sh}><TouchableOpacity style={pf.bb} onPress={function(){sSp(null)}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>ONT Rewards</Text><View style={{width:36}}/></View><ScrollView style={{flex:1}}><View style={{backgroundColor:C.navy,padding:24,alignItems:"center"}}><Text style={{fontSize:48,fontWeight:"800",color:C.gold}}>340</Text><Text style={{fontSize:14,color:"rgba(255,255,255,0.5)"}}>total points</Text><View style={{width:"100%",height:6,borderRadius:3,backgroundColor:"rgba(255,255,255,0.1)",marginTop:16}}><View style={{height:6,borderRadius:3,backgroundColor:C.gold,width:"57%"}}/></View><View style={{flexDirection:"row",justifyContent:"space-between",width:"100%",marginTop:6}}><Text style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>260 to next</Text><Text style={{fontSize:11,color:C.gold}}>600 pts</Text></View></View><View style={{padding:16}}>{[{n:"Free side",p:"60 pts",i:"\ud83c\udf5f"},{n:"Free drink",p:"60 pts",i:"\ud83e\udd64"},{n:"$5 off",p:"120 pts",i:"\ud83d\udcb0"}].map(function(r){return <View key={r.n} style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingVertical:12,borderBottomWidth:1,borderBottomColor:C.grayLight}}><View style={{flexDirection:"row",alignItems:"center",gap:12}}><View style={{width:40,height:40,borderRadius:12,backgroundColor:C.goldBg,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:18}}>{r.i}</Text></View><View><Text style={{fontSize:14,fontWeight:"600",color:C.navy}}>{r.n}</Text><Text style={{fontSize:12,color:C.gray}}>{r.p}</Text></View></View><TouchableOpacity style={{paddingVertical:6,paddingHorizontal:14,borderRadius:8,backgroundColor:C.navy}}><Text style={{fontSize:12,fontWeight:"700",color:C.gold}}>Redeem</Text></TouchableOpacity></View>})}</View></ScrollView></View>;
-if(sp==="orders")return <View style={pf.c}><View style={pf.sh}><TouchableOpacity style={pf.bb} onPress={function(){sSp(null)}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>Order history</Text><View style={{width:36}}/></View><ScrollView style={{flex:1,padding:16}}>{[{p:"Starbucks",it:"Iced Latte, Croissant",d:"Mar 18",t:"$9.45",i:"\u2615"},{p:"El Pollo Loco",it:"Chicken Bowl",d:"Mar 12",t:"$14.20",i:"\ud83c\udf57"},{p:"Hudson News",it:"Water, Trail Mix",d:"Feb 28",t:"$18.75",i:"\ud83d\udecd"}].map(function(o){return <View key={o.p+o.d} style={{backgroundColor:C.white,borderRadius:14,padding:14,marginBottom:8,elevation:1}}><View style={{flexDirection:"row",gap:12}}><View style={{width:42,height:42,borderRadius:12,backgroundColor:C.goldBg,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:18}}>{o.i}</Text></View><View style={{flex:1}}><View style={{flexDirection:"row",justifyContent:"space-between"}}><Text style={{fontSize:14,fontWeight:"700",color:C.navy}}>{o.p}</Text><Text style={{fontSize:13,fontWeight:"700",color:C.navy}}>{o.t}</Text></View><Text style={{fontSize:12,color:C.gray,marginTop:2}}>{o.it}</Text><Text style={{fontSize:11,color:C.gray,marginTop:4}}>{o.d}</Text></View></View><View style={{flexDirection:"row",gap:8,marginTop:12}}><TouchableOpacity style={{flex:1,paddingVertical:8,borderRadius:10,backgroundColor:C.navy,alignItems:"center"}}><Text style={{fontSize:12,fontWeight:"700",color:C.gold}}>Reorder</Text></TouchableOpacity><TouchableOpacity style={{flex:1,paddingVertical:8,borderRadius:10,borderWidth:1.5,borderColor:C.grayLight,alignItems:"center"}}><Text style={{fontSize:12,fontWeight:"600",color:C.navy}}>Receipt</Text></TouchableOpacity></View></View>})}</ScrollView></View>;
-if(sp==="settings")return <View style={pf.c}><View style={pf.sh}><TouchableOpacity style={pf.bb} onPress={function(){sSp(null)}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>Settings</Text><View style={{width:36}}/></View><ScrollView style={{flex:1,padding:16}}>{["Edit profile","Change password","Language","Map theme"].map(function(l){return <View key={l} style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingVertical:14,borderBottomWidth:1,borderBottomColor:C.grayLight}}><Text style={{fontSize:14,fontWeight:"600",color:C.navy}}>{l}</Text><Text style={{fontSize:16,color:C.grayLight}}>{"\u203a"}</Text></View>})}<Text style={{textAlign:"center",marginTop:20,fontSize:11,color:"#ccc"}}>ONT Navigator v1.2</Text></ScrollView></View>;
-return <View style={pf.c}><StatusBar barStyle="light-content"/><View style={{backgroundColor:C.navy,padding:16,paddingTop:10}}><View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingTop:4}}><TouchableOpacity style={pf.bb} onPress={function(){nav("home")}}><Text style={{fontSize:16,color:C.white}}>{"\u2190"}</Text></TouchableOpacity><Text style={{fontSize:17,fontWeight:"700",color:C.white}}>Profile</Text><View style={{width:36}}/></View><View style={{alignItems:"center",paddingBottom:18,paddingTop:8}}><View style={{width:72,height:72,borderRadius:36,backgroundColor:"rgba(201,168,76,0.1)",borderWidth:2.5,borderColor:"rgba(201,168,76,0.25)",alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:28,color:C.gold,fontWeight:"700"}}>PF</Text></View><Text style={{fontSize:20,fontWeight:"800",color:C.white,marginTop:10}}>Patrick Fong</Text><Text style={{fontSize:12,color:"rgba(255,255,255,0.45)",marginTop:4}}>pfong001@email.com</Text></View></View>
-<ScrollView style={{flex:1}}><View style={{flexDirection:"row",gap:8,padding:16,paddingBottom:0}}>{[{n:"340",l:"Pts"},{n:"12",l:"Flights"},{n:"2",l:"Orders"}].map(function(s2){return <TouchableOpacity key={s2.l} style={pf.stat} onPress={function(){if(s2.l==="Pts")sSp("rewards");if(s2.l==="Orders")sSp("orders")}}><Text style={{fontSize:22,fontWeight:"800",color:C.navy}}>{s2.n}</Text><Text style={{fontSize:10,color:C.gray,marginTop:2}}>{s2.l}</Text></TouchableOpacity>})}</View>
-<View style={{padding:16,paddingTop:12}}>{[{ic:"\ud83c\udfc6",l:"Rewards",s:"340 points",p:"rewards"},{ic:"\ud83d\uded2",l:"Order history",s:"Starbucks \u00b7 $9.45",p:"orders",ct:2},{ic:"\ud83d\udcb3",l:"Saved cards",s:"3 cards",p:"wallet"},{ic:"\u2708",l:"Travel prefs",s:"ONT \u00b7 Southwest",p:"prefs"},{ic:"\u2699",l:"Settings",s:"Account, notifications",p:"settings"}].map(function(it){return <TouchableOpacity key={it.l} style={pf.mRow} onPress={function(){if(it.p==="wallet")nav("wallet");else sSp(it.p)}}><View style={{flexDirection:"row",alignItems:"center",gap:14}}><View style={pf.mIc}><Text style={{fontSize:18}}>{it.ic}</Text></View><View><View style={{flexDirection:"row",alignItems:"center",gap:8}}><Text style={{fontSize:15,fontWeight:"600",color:C.navy}}>{it.l}</Text>{it.ct?<View style={{backgroundColor:C.gold,borderRadius:10,paddingHorizontal:7,paddingVertical:2}}><Text style={{fontSize:10,fontWeight:"700",color:C.white}}>{it.ct}</Text></View>:null}</View><Text style={{fontSize:12,color:C.gray,marginTop:1}}>{it.s}</Text></View></View><Text style={{fontSize:16,color:C.grayLight}}>{"\u203a"}</Text></TouchableOpacity>})}</View>
-<View style={{padding:16,paddingTop:0}}><TouchableOpacity style={{width:"100%",paddingVertical:14,borderRadius:14,borderWidth:1.5,borderColor:"#e05555"}}><Text style={{fontSize:15,fontWeight:"600",color:"#e05555",textAlign:"center"}}>Sign out</Text></TouchableOpacity><Text style={{textAlign:"center",marginTop:12,fontSize:11,color:"#ccc"}}>ONT Navigator v1.2</Text></View></ScrollView><BT act="profile" nav={nav}/></View>}
-var pf=StyleSheet.create({c:{flex:1,backgroundColor:C.bg},sh:{backgroundColor:C.navy,padding:16,paddingTop:10,flexDirection:"row",justifyContent:"space-between",alignItems:"center"},bb:{width:36,height:36,borderRadius:10,backgroundColor:"rgba(255,255,255,0.08)",alignItems:"center",justifyContent:"center"},stat:{flex:1,backgroundColor:C.white,borderRadius:14,paddingVertical:12,alignItems:"center",elevation:1},mRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",padding:14,backgroundColor:C.white,borderRadius:14,marginBottom:6,elevation:1},mIc:{width:40,height:40,borderRadius:12,backgroundColor:C.goldBg,alignItems:"center",justifyContent:"center"}});
+  return (
+    <View style={ws.container}>
+      <TopSpacer />
+      <StatusBar barStyle="light-content" />
+      <View style={[ws.inner, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={{ fontSize: 64 }}>✈️</Text>
+        <Text style={ws.mainTitle}>ONT Navigator</Text>
+        <Text style={ws.mainSub}>Ontario International Airport</Text>
+        <TouchableOpacity style={[ws.btnGold, { width: "100%" }]} onPress={() => setAuthPage("signup")}><Text style={ws.btnGoldText}>Sign Up</Text></TouchableOpacity>
+        <TouchableOpacity style={[ws.btnOutline, { width: "100%" }]} onPress={() => setAuthPage("login")}><Text style={ws.btnOutlineText}>Log In</Text></TouchableOpacity>
+        <TouchableOpacity onPress={onLogin}><Text style={ws.guestText}>Continue as guest →</Text></TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
-// APP ROOT
-export default function App(){var[w,sW]=useState(true),[sc,sSc]=useState("home");
-if(w)return <Welcome done={function(){sW(false)}}/>;
-switch(sc){
-case"home":return <Home nav={sSc}/>;
-case"map":return <MapScreen nav={sSc}/>;
-case"flights":return <Flights nav={sSc}/>;
-case"tsa":return <TSA nav={sSc}/>;
-case"wallet":return <Wallet nav={sSc}/>;
-case"dutyfree":return <DutyFree nav={sSc}/>;
-case"profile":return <Profile nav={sSc}/>;
-default:return <Home nav={sSc}/>;
-}}
+const ws = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.navy },
+  inner: { flex: 1, padding: 24, justifyContent: "center" },
+  header: { alignItems: "center", marginBottom: 32 },
+  bigIcon: { fontSize: 40, marginBottom: 8 },
+  title: { color: C.gold, fontSize: 22, fontWeight: "700" },
+  subtitle: { color: C.gray, fontSize: 13, marginTop: 6 },
+  input: { backgroundColor: C.navyLight, borderRadius: 12, padding: 14, color: C.white, fontSize: 14, marginBottom: 12, borderWidth: 1, borderColor: C.navyLight },
+  hint: { color: C.gray, fontSize: 11, marginTop: -8, marginBottom: 8, paddingLeft: 4 },
+  btnGold: { backgroundColor: C.gold, borderRadius: 12, padding: 14, alignItems: "center", marginBottom: 12 },
+  btnGoldText: { color: C.navy, fontSize: 15, fontWeight: "700" },
+  btnOutline: { borderRadius: 12, padding: 14, alignItems: "center", marginBottom: 16, borderWidth: 1.5, borderColor: C.gold },
+  btnOutlineText: { color: C.gold, fontSize: 15, fontWeight: "600" },
+  switchRow: { flexDirection: "row", justifyContent: "center", marginTop: 8 },
+  switchText: { color: C.gray, fontSize: 13 },
+  switchLink: { color: C.gold, fontSize: 13, fontWeight: "600" },
+  mainTitle: { color: C.white, fontSize: 28, fontWeight: "800", letterSpacing: 1, marginTop: 16 },
+  mainSub: { color: C.gold, fontSize: 14, fontWeight: "600", marginTop: 8, marginBottom: 40 },
+  guestText: { color: C.gray, fontSize: 14, marginTop: 4 },
+});
+
+// ============ HOME SCREEN (FIX #2: profile icon top-right opens profile) ============
+function Home({ setScreen }) {
+  const promos = [
+    { tag: "NOW OPEN", title: "Escape Lounge T2", subtitle: "Premium lounge experience · complimentary drinks & bites", bg: "#1a2d47" },
+    { tag: "LIMITED TIME", title: "20% Off Duty Free", subtitle: "Save on fragrances, spirits & accessories before you fly", bg: "#2c1810", tagColor: "#ff9800" },
+    { tag: "NEW EXHIBIT", title: "ONT Art Walk", subtitle: "Local artist showcase · Terminal 2 & 4 corridors", bg: "#0d2818", tagColor: "#66bb6a" },
+    { tag: "DEAL", title: "Pre-Book Parking $8/day", subtitle: "Save 40% when you reserve parking before arrival", bg: "#1a1030", tagColor: "#ab47bc" },
+  ];
+  const features = [
+    { icon: "🗺️", label: "Map", screen: "map" },
+    { icon: "✈️", label: "Flights", screen: "flights" },
+    { icon: "🛡️", label: "TSA", screen: "tsa" },
+    { icon: "💳", label: "Wallet", screen: "wallet" },
+    { icon: "🛍️", label: "Duty Free", screen: "dutyfree" },
+    { icon: "🅿️", label: "Parking", screen: "parking" },
+  ];
+  const businesses = [
+    { icon: "☕", name: "Starbucks", desc: "Coffee & pastries · T2 Gate 204", hours: "5AM - 10PM" },
+    { icon: "🍗", name: "El Pollo Loco", desc: "Mexican grill · T2 Food Court", hours: "6AM - 9PM" },
+    { icon: "🛋️", name: "Escape Lounge", desc: "Premium lounge · T2 Level 2", hours: "5:30AM - 10PM" },
+    { icon: "📰", name: "Hudson News", desc: "Snacks & essentials · T4 Gate 401", hours: "4:30AM - 11PM" },
+  ];
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <View style={hs.headerBox}>
+        <View style={hs.headerRow}>
+          <View>
+            <Text style={hs.greeting}>Good morning ✈</Text>
+            <Text style={hs.airportName}>Ontario International Airport</Text>
+          </View>
+          <TouchableOpacity onPress={() => setScreen("profile")} style={hs.avatar}>
+            <Text style={{ fontSize: 18 }}>👤</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={hs.searchBox}>
+          <Text style={{ color: C.gray }}>🔍</Text>
+          <Text style={{ color: C.gray, fontSize: 14, marginLeft: 8 }}>Search gates, food, lounges...</Text>
+        </View>
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+        <PromoCarousel items={promos} />
+        <View style={hs.grid}>
+          {features.map(f => (
+            <TouchableOpacity key={f.label} style={hs.gridItem} onPress={() => setScreen(f.screen)}>
+              <Text style={{ fontSize: 28, marginBottom: 6 }}>{f.icon}</Text>
+              <Text style={hs.gridLabel}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={hs.sectionTitle}>Near You</Text>
+        {businesses.map(b => (
+          <View key={b.name} style={hs.bizCard}>
+            <View style={hs.bizIcon}><Text style={{ fontSize: 24 }}>{b.icon}</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={hs.bizName}>{b.name}</Text>
+              <Text style={hs.bizDesc}>{b.desc}</Text>
+              <Text style={hs.bizHours}>{b.hours}</Text>
+            </View>
+            <TouchableOpacity style={hs.navBtn} onPress={() => setScreen("map")}>
+              <Text style={hs.navBtnText}>Navigate</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+const hs = StyleSheet.create({
+  headerBox: { backgroundColor: C.navy, padding: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16, alignItems: "center" },
+  greeting: { color: C.white, fontSize: 20, fontWeight: "700" },
+  airportName: { color: C.gray, fontSize: 13, marginTop: 2 },
+  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.navyLight, alignItems: "center", justifyContent: "center" },
+  searchBox: { backgroundColor: C.navyLight, borderRadius: 12, padding: 10, paddingHorizontal: 14, flexDirection: "row", alignItems: "center" },
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 20 },
+  gridItem: { width: (SW - 48) / 3, backgroundColor: C.white, borderRadius: 16, padding: 18, alignItems: "center", marginBottom: 12, borderWidth: 1, borderColor: "#eee", shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  gridLabel: { fontSize: 12, fontWeight: "600", color: C.navy },
+  sectionTitle: { fontSize: 16, color: C.navy, fontWeight: "700", marginBottom: 12, marginLeft: 4 },
+  bizCard: { backgroundColor: C.white, borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#eee", shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  bizIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: C.goldBg, alignItems: "center", justifyContent: "center", marginRight: 14 },
+  bizName: { fontWeight: "700", fontSize: 14, color: C.navy },
+  bizDesc: { fontSize: 12, color: C.gray, marginTop: 2 },
+  bizHours: { fontSize: 11, color: C.gold, marginTop: 4, fontWeight: "600" },
+  navBtn: { backgroundColor: C.gold, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
+  navBtnText: { color: C.navy, fontSize: 12, fontWeight: "600" },
+});
+
+// ============ MAP SCREEN (FIX #1: flight card above map, map shrinks) ============
+function MapScreen({ myFlight, goHome }) {
+  const [cat, setCat] = useState("All");
+  const [sel, setSel] = useState(null);
+  const [floor, setFloor] = useState(2);
+  const cats = ["All", "Gates", "Dining", "Coffee", "Lounges", "TSA"];
+  const locations = [
+    { id: 1, n: "Gate 201", c: "Gates", f: 2, x: 0.25, y: 0.30, icon: "🚪" },
+    { id: 2, n: "Gate 202", c: "Gates", f: 2, x: 0.40, y: 0.25, icon: "🚪" },
+    { id: 3, n: "Starbucks", c: "Coffee", f: 2, x: 0.55, y: 0.55, icon: "☕", rating: "4.3", hours: "5AM-10PM" },
+    { id: 4, n: "El Pollo Loco", c: "Dining", f: 2, x: 0.70, y: 0.40, icon: "🍗", rating: "4.1", hours: "6AM-9PM" },
+    { id: 5, n: "Escape Lounge", c: "Lounges", f: 2, x: 0.35, y: 0.65, icon: "🛋️", rating: "4.7", hours: "5:30AM-10PM" },
+    { id: 6, n: "TSA Checkpoint A", c: "TSA", f: 1, x: 0.45, y: 0.45, icon: "🛡️", wait: "12 min" },
+    { id: 7, n: "Hudson News", c: "Dining", f: 2, x: 0.60, y: 0.70, icon: "📰", rating: "3.9", hours: "4:30AM-11PM" },
+    { id: 8, n: "Gate 401", c: "Gates", f: 2, x: 0.80, y: 0.55, icon: "🚪" },
+  ];
+  const filtered = locations.filter(l => (cat === "All" || l.c === cat) && l.f === floor);
+  const mapW = SW - 24;
+  const mapH = myFlight ? 220 : 300;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <ScreenHeader title={`ONT Terminal · Level ${floor}`} goHome={goHome} />
+      <View style={{ backgroundColor: C.navy, paddingHorizontal: 16, paddingBottom: 14 }}>
+        <View style={{ backgroundColor: C.navyLight, borderRadius: 10, padding: 8, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+          <Text style={{ color: C.gray }}>🔍</Text>
+          <Text style={{ color: C.gray, fontSize: 13, marginLeft: 8 }}>Search gates, food...</Text>
+        </View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6 }}>
+          {cats.map(c => (
+            <TouchableOpacity key={c} onPress={() => { setCat(c); setSel(null); }} style={{ paddingVertical: 7, paddingHorizontal: 14, borderRadius: 20, backgroundColor: cat === c ? C.gold : C.navyLight }}>
+              <Text style={{ color: cat === c ? C.navy : C.gray, fontSize: 12, fontWeight: "600" }}>{c}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+      <ScrollView style={{ flex: 1 }}>
+        {/* FIX #1: My Flight card on top of map area */}
+        {myFlight && (
+          <View style={{ margin: 12, marginBottom: 0, backgroundColor: C.white, borderRadius: 14, padding: 14, borderWidth: 2, borderColor: C.gold, shadowColor: C.gold, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+              <Text style={{ fontSize: 11, color: C.gold, fontWeight: "700" }}>✈ MY FLIGHT</Text>
+              <View style={{ backgroundColor: myFlight.color + "22", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}><Text style={{ fontSize: 10, color: myFlight.color, fontWeight: "700" }}>{myFlight.status}</Text></View>
+            </View>
+            <Text style={{ fontWeight: "700", fontSize: 15, color: C.navy }}>{myFlight.num} · {myFlight.airline}</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+              <Text style={{ fontSize: 12, color: C.gray }}>{myFlight.dest || myFlight.from} · Gate {myFlight.gate}</Text>
+              <Text style={{ fontSize: 12, color: C.navy, fontWeight: "600" }}>{myFlight.time}</Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: C.gold, borderRadius: 8, padding: 8, alignItems: "center" }}><Text style={{ color: C.navy, fontWeight: "600", fontSize: 11 }}>🧭 Navigate to Gate</Text></TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: C.navyLight, borderRadius: 8, padding: 8, alignItems: "center" }}><Text style={{ color: C.white, fontWeight: "600", fontSize: 11 }}>🎫 Boarding Pass</Text></TouchableOpacity>
+            </View>
+          </View>
+        )}
+        {/* Map area - shrinks when flight card is showing */}
+        <View style={{ margin: 12, borderRadius: 16, backgroundColor: "#e8edf2", height: mapH, overflow: "hidden", borderWidth: 2, borderColor: "#d0d8e0", position: "relative" }}>
+          <Text style={{ position: "absolute", top: 8, left: mapW * 0.18, fontSize: 11, color: C.gray, fontWeight: "600" }}>Terminal 2</Text>
+          <Text style={{ position: "absolute", top: 8, right: mapW * 0.12, fontSize: 11, color: C.gray, fontWeight: "600" }}>Terminal 4</Text>
+          <View style={{ position: "absolute", top: mapH * 0.15, left: mapW * 0.08, width: mapW * 0.38, height: mapH * 0.7, backgroundColor: "#d5dce4", borderRadius: 8, borderWidth: 1, borderColor: "#b0bcc8" }} />
+          <View style={{ position: "absolute", top: mapH * 0.15, right: mapW * 0.08, width: mapW * 0.38, height: mapH * 0.7, backgroundColor: "#d5dce4", borderRadius: 8, borderWidth: 1, borderColor: "#b0bcc8" }} />
+          <View style={{ position: "absolute", left: mapW * 0.30 - 7, top: mapH * 0.50 - 7, width: 14, height: 14, borderRadius: 7, backgroundColor: "#4285f4", borderWidth: 3, borderColor: C.white, shadowColor: "#4285f4", shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 }} />
+          {filtered.map(l => (
+            <TouchableOpacity key={l.id} onPress={() => setSel(sel?.id === l.id ? null : l)} style={{ position: "absolute", left: mapW * l.x - 18, top: mapH * l.y - 18, alignItems: "center", zIndex: sel?.id === l.id ? 10 : 1 }}>
+              <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: sel?.id === l.id ? C.gold : C.navy, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, elevation: 4 }}>
+                <Text style={{ fontSize: 14 }}>{l.icon}</Text>
+              </View>
+              <Text style={{ fontSize: 8, color: C.navy, fontWeight: "600", marginTop: 1 }}>{l.n}</Text>
+              {l.wait && <View style={{ backgroundColor: "#e8f5e9", borderRadius: 6, paddingHorizontal: 4, paddingVertical: 1 }}><Text style={{ fontSize: 7, color: C.green, fontWeight: "700" }}>{l.wait}</Text></View>}
+            </TouchableOpacity>
+          ))}
+          <View style={{ position: "absolute", right: 10, top: 10, backgroundColor: "rgba(255,255,255,0.95)", borderRadius: 10, padding: 4, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
+            {[3, 2, 1].map(f => (
+              <TouchableOpacity key={f} onPress={() => { setFloor(f); setSel(null); }} style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: floor === f ? C.gold : "transparent", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: floor === f ? C.navy : C.gray }}>L{f}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        {sel && (
+          <View style={{ margin: 12, marginTop: 0, backgroundColor: C.white, borderRadius: 16, padding: 16, borderWidth: 2, borderColor: C.gold, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: C.goldBg, alignItems: "center", justifyContent: "center", marginRight: 12 }}><Text style={{ fontSize: 24 }}>{sel.icon}</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: "700", fontSize: 15, color: C.navy }}>{sel.n}</Text>
+                <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{sel.c} · Level {sel.f}</Text>
+                {sel.rating && <Text style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>⭐ {sel.rating} {sel.hours ? `· ${sel.hours}` : ""}</Text>}
+                {sel.wait && <Text style={{ fontSize: 12, color: C.green, fontWeight: "600", marginTop: 2 }}>Wait: {sel.wait}</Text>}
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: C.gold, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.navy, fontWeight: "600", fontSize: 12 }}>🧭 Navigate</Text></TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: C.navyLight, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.white, fontWeight: "600", fontSize: 12 }}>ℹ️ Details</Text></TouchableOpacity>
+            </View>
+          </View>
+        )}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+// ============ TICKET / BOARDING PASS SCREEN (FIX #2: new screen) ============
+function TicketScreen({ myFlight, setMyFlight, goHome }) {
+  const [scanMode, setScanMode] = useState(false);
+
+  if (myFlight) return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <ScreenHeader title="My Boarding Pass" subtitle="Show this at the gate" goHome={goHome} />
+      <ScrollView contentContainerStyle={{ padding: 16, alignItems: "center" }}>
+        {/* Boarding pass card */}
+        <View style={{ width: "100%", backgroundColor: C.white, borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 12, elevation: 6 }}>
+          {/* Top section */}
+          <View style={{ backgroundColor: C.navy, padding: 20 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ color: C.gold, fontSize: 12, fontWeight: "700" }}>BOARDING PASS</Text>
+              <Text style={{ color: C.gray, fontSize: 11 }}>{myFlight.airline}</Text>
+            </View>
+            <Text style={{ color: C.white, fontSize: 28, fontWeight: "800", marginTop: 8 }}>{myFlight.num}</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 16 }}>
+              <View>
+                <Text style={{ color: C.gray, fontSize: 10, fontWeight: "600" }}>FROM</Text>
+                <Text style={{ color: C.white, fontSize: 22, fontWeight: "800" }}>ONT</Text>
+                <Text style={{ color: C.gray, fontSize: 11 }}>Ontario, CA</Text>
+              </View>
+              <View style={{ alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 24 }}>✈️</Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={{ color: C.gray, fontSize: 10, fontWeight: "600" }}>TO</Text>
+                <Text style={{ color: C.white, fontSize: 22, fontWeight: "800" }}>{(myFlight.dest || myFlight.from || "").match(/\((\w+)\)/)?.[1] || "---"}</Text>
+                <Text style={{ color: C.gray, fontSize: 11 }}>{(myFlight.dest || myFlight.from || "").replace(/\s*\(\w+\)/, "")}</Text>
+              </View>
+            </View>
+          </View>
+          {/* Dotted divider */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginVertical: -1 }}>
+            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: C.bg, marginLeft: -10 }} />
+            <View style={{ flex: 1, borderTopWidth: 2, borderStyle: "dashed", borderColor: C.grayLight }} />
+            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: C.bg, marginRight: -10 }} />
+          </View>
+          {/* Details */}
+          <View style={{ padding: 20 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+              <View><Text style={{ color: C.gray, fontSize: 10, fontWeight: "600" }}>GATE</Text><Text style={{ color: C.navy, fontSize: 20, fontWeight: "800" }}>{myFlight.gate}</Text></View>
+              <View style={{ alignItems: "center" }}><Text style={{ color: C.gray, fontSize: 10, fontWeight: "600" }}>TIME</Text><Text style={{ color: C.navy, fontSize: 20, fontWeight: "800" }}>{myFlight.time}</Text></View>
+              <View style={{ alignItems: "flex-end" }}><Text style={{ color: C.gray, fontSize: 10, fontWeight: "600" }}>SEAT</Text><Text style={{ color: C.navy, fontSize: 20, fontWeight: "800" }}>14A</Text></View>
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+              <View><Text style={{ color: C.gray, fontSize: 10, fontWeight: "600" }}>CLASS</Text><Text style={{ color: C.navy, fontSize: 14, fontWeight: "600" }}>Economy</Text></View>
+              <View style={{ alignItems: "center" }}><Text style={{ color: C.gray, fontSize: 10, fontWeight: "600" }}>STATUS</Text><View style={{ backgroundColor: myFlight.color + "18", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 2, marginTop: 2 }}><Text style={{ fontSize: 12, color: myFlight.color, fontWeight: "700" }}>{myFlight.status}</Text></View></View>
+              <View style={{ alignItems: "flex-end" }}><Text style={{ color: C.gray, fontSize: 10, fontWeight: "600" }}>ZONE</Text><Text style={{ color: C.navy, fontSize: 14, fontWeight: "600" }}>3</Text></View>
+            </View>
+            {/* QR code placeholder */}
+            <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 16, alignItems: "center", borderWidth: 2, borderColor: C.grayLight }}>
+              <View style={{ width: 140, height: 140, backgroundColor: C.navy, borderRadius: 8, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: C.white, fontSize: 10, textAlign: "center", padding: 10 }}>QR CODE{"\n"}{myFlight.num}{"\n"}GATE {myFlight.gate}</Text>
+                <View style={{ position: "absolute", top: 10, left: 10, width: 20, height: 20, borderTopWidth: 3, borderLeftWidth: 3, borderColor: C.gold }} />
+                <View style={{ position: "absolute", top: 10, right: 10, width: 20, height: 20, borderTopWidth: 3, borderRightWidth: 3, borderColor: C.gold }} />
+                <View style={{ position: "absolute", bottom: 10, left: 10, width: 20, height: 20, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: C.gold }} />
+                <View style={{ position: "absolute", bottom: 10, right: 10, width: 20, height: 20, borderBottomWidth: 3, borderRightWidth: 3, borderColor: C.gold }} />
+              </View>
+              <Text style={{ fontSize: 11, color: C.gray, marginTop: 8 }}>Scan at gate for boarding</Text>
+            </View>
+          </View>
+        </View>
+        <TouchableOpacity onPress={() => setMyFlight(null)} style={{ marginTop: 16, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#ffcdd2", backgroundColor: "#fff5f5", width: "100%", alignItems: "center" }}>
+          <Text style={{ color: C.red, fontSize: 14, fontWeight: "600" }}>Remove Boarding Pass</Text>
+        </TouchableOpacity>
+        <View style={{ height: 30 }} />
+      </ScrollView>
+    </View>
+  );
+
+  // No flight set — scan prompt
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <ScreenHeader title="Boarding Pass" subtitle="Scan or set your flight" goHome={goHome} />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
+        <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: C.goldBg, alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Text style={{ fontSize: 44 }}>🎫</Text>
+        </View>
+        <Text style={{ fontSize: 18, fontWeight: "700", color: C.navy, textAlign: "center" }}>No Boarding Pass</Text>
+        <Text style={{ fontSize: 13, color: C.gray, textAlign: "center", marginTop: 8, lineHeight: 20 }}>Scan your boarding pass barcode or set your flight from the Flights tab</Text>
+        <TouchableOpacity onPress={() => setScanMode(true)} style={{ backgroundColor: C.gold, borderRadius: 12, padding: 14, paddingHorizontal: 32, marginTop: 24 }}>
+          <Text style={{ color: C.navy, fontSize: 15, fontWeight: "700" }}>📷 Scan Boarding Pass</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 12, color: C.gray, marginTop: 12 }}>or go to Flights → Set as My Flight</Text>
+      </View>
+      {scanMode && (
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <View style={{ width: 240, height: 240, borderWidth: 3, borderColor: C.gold, borderRadius: 16, alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+            <View style={{ position: "absolute", top: -2, left: -2, width: 30, height: 30, borderTopWidth: 4, borderLeftWidth: 4, borderColor: C.gold, borderTopLeftRadius: 16 }} />
+            <View style={{ position: "absolute", top: -2, right: -2, width: 30, height: 30, borderTopWidth: 4, borderRightWidth: 4, borderColor: C.gold, borderTopRightRadius: 16 }} />
+            <View style={{ position: "absolute", bottom: -2, left: -2, width: 30, height: 30, borderBottomWidth: 4, borderLeftWidth: 4, borderColor: C.gold, borderBottomLeftRadius: 16 }} />
+            <View style={{ position: "absolute", bottom: -2, right: -2, width: 30, height: 30, borderBottomWidth: 4, borderRightWidth: 4, borderColor: C.gold, borderBottomRightRadius: 16 }} />
+            <Text style={{ color: C.white, fontSize: 14, textAlign: "center" }}>📷{"\n\n"}Point camera at{"\n"}boarding pass barcode</Text>
+          </View>
+          <TouchableOpacity onPress={() => {
+            setScanMode(false);
+            setMyFlight({ id: 99, num: "WN 1423", airline: "Southwest", dest: "Las Vegas (LAS)", gate: "204", time: "10:45 AM", status: "Boarding", color: C.gold });
+          }} style={{ backgroundColor: C.gold, borderRadius: 12, padding: 14, paddingHorizontal: 32, marginBottom: 12 }}>
+            <Text style={{ color: C.navy, fontSize: 15, fontWeight: "700" }}>Simulate Scan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setScanMode(false)}>
+            <Text style={{ color: C.white, fontSize: 14 }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ============ FLIGHTS SCREEN ============
+function Flights({ myFlight, setMyFlight, goHome }) {
+  const [tab, setTab] = useState("departures");
+  const [search, setSearch] = useState("");
+  const [selFlight, setSelFlight] = useState(null);
+  const flights = {
+    departures: [
+      { id: 1, num: "WN 1423", airline: "Southwest", dest: "Las Vegas (LAS)", gate: "204", time: "10:45 AM", status: "Boarding", color: C.gold },
+      { id: 2, num: "UA 5521", airline: "United", dest: "San Francisco (SFO)", gate: "207", time: "11:30 AM", status: "On Time", color: C.green },
+      { id: 3, num: "DL 2287", airline: "Delta", dest: "Atlanta (ATL)", gate: "401", time: "12:15 PM", status: "Delayed", color: C.red },
+      { id: 4, num: "AA 3310", airline: "American", dest: "Dallas (DFW)", gate: "209", time: "1:00 PM", status: "On Time", color: C.green },
+      { id: 5, num: "WN 738", airline: "Southwest", dest: "Denver (DEN)", gate: "202", time: "2:30 PM", status: "On Time", color: C.green },
+      { id: 6, num: "F9 1182", airline: "Frontier", dest: "Phoenix (PHX)", gate: "405", time: "3:45 PM", status: "Delayed", color: C.red },
+    ],
+    arrivals: [
+      { id: 7, num: "WN 2219", airline: "Southwest", from: "Seattle (SEA)", gate: "201", time: "10:20 AM", status: "Arrived", color: C.blue, carousel: "3" },
+      { id: 8, num: "UA 1087", airline: "United", from: "Chicago (ORD)", gate: "206", time: "11:00 AM", status: "On Time", color: C.green, carousel: "5" },
+      { id: 9, num: "DL 1543", airline: "Delta", from: "New York (JFK)", gate: "403", time: "12:45 PM", status: "Delayed", color: C.red, carousel: "2" },
+    ]
+  };
+  const list = flights[tab].filter(f => !search || f.num.toLowerCase().includes(search.toLowerCase()) || f.airline.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <ScreenHeader title="KONT · TODAY" subtitle="Ontario International Airport" goHome={goHome} />
+      <View style={{ backgroundColor: C.navy, paddingHorizontal: 16, paddingBottom: 14 }}>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+          {["departures", "arrivals"].map(t => (
+            <TouchableOpacity key={t} onPress={() => setTab(t)} style={{ flex: 1, padding: 8, borderRadius: 10, backgroundColor: tab === t ? C.gold : C.navyLight, alignItems: "center" }}>
+              <Text style={{ color: tab === t ? C.navy : C.gray, fontSize: 13, fontWeight: "600", textTransform: "capitalize" }}>{t}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={{ backgroundColor: C.navyLight, borderRadius: 10, padding: 8, paddingHorizontal: 12, flexDirection: "row", alignItems: "center" }}>
+          <Text style={{ color: C.gray }}>🔍</Text>
+          <TextInput style={{ flex: 1, color: C.white, fontSize: 13, marginLeft: 8 }} placeholder="Search flight, airline..." placeholderTextColor={C.gray} value={search} onChangeText={setSearch} />
+        </View>
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12 }}>
+        {myFlight && (
+          <View style={{ backgroundColor: C.white, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 2, borderColor: C.gold }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={{ fontSize: 11, color: C.gold, fontWeight: "700" }}>✈ MY FLIGHT</Text>
+              <TouchableOpacity onPress={() => setMyFlight(null)}><Text style={{ color: C.gray, fontSize: 12 }}>✕ Remove</Text></TouchableOpacity>
+            </View>
+            <Text style={{ fontWeight: "700", fontSize: 15, color: C.navy }}>{myFlight.num} · {myFlight.airline}</Text>
+            <Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{myFlight.dest || myFlight.from} · Gate {myFlight.gate}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+              <View style={{ backgroundColor: myFlight.color + "22", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3 }}><Text style={{ fontSize: 11, color: myFlight.color, fontWeight: "700" }}>{myFlight.status}</Text></View>
+              <Text style={{ fontSize: 11, color: C.gray }}>{myFlight.time}</Text>
+            </View>
+          </View>
+        )}
+        {list.map(f => (
+          <TouchableOpacity key={f.id} onPress={() => setSelFlight(selFlight?.id === f.id ? null : f)} style={{ backgroundColor: C.white, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: selFlight?.id === f.id ? 2 : 1, borderColor: selFlight?.id === f.id ? C.gold : "#eee" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <View><Text style={{ fontWeight: "700", fontSize: 14, color: C.navy }}>{f.num}</Text><Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{f.airline}</Text></View>
+              <View style={{ alignItems: "flex-end" }}><Text style={{ fontSize: 13, fontWeight: "600", color: C.navy }}>{f.time}</Text><View style={{ backgroundColor: f.color + "18", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginTop: 2 }}><Text style={{ fontSize: 11, color: f.color, fontWeight: "700" }}>{f.status}</Text></View></View>
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
+              <Text style={{ fontSize: 12, color: C.gray }}>{tab === "departures" ? "To" : "From"}: {f.dest || f.from}</Text>
+              <Text style={{ fontSize: 12, color: C.gray }}>Gate {f.gate}</Text>
+            </View>
+            {f.carousel && <Text style={{ fontSize: 11, color: C.blue, marginTop: 4 }}>🧳 Baggage Carousel {f.carousel}</Text>}
+            {selFlight?.id === f.id && (
+              <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#eee", flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity onPress={() => { setMyFlight(f); setSelFlight(null); }} style={{ flex: 1, backgroundColor: C.gold, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.navy, fontWeight: "600", fontSize: 12 }}>Set as My Flight</Text></TouchableOpacity>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: C.navyLight, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.white, fontWeight: "600", fontSize: 12 }}>🧭 Navigate</Text></TouchableOpacity>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+// ============ TSA SCREEN ============
+function TSA({ goHome }) {
+  const [showTips, setShowTips] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+  const [reporting, setReporting] = useState(null);
+  const [reportVal, setReportVal] = useState(10);
+  const [reported, setReported] = useState(false);
+  const tips = ["Have ID ready", "Remove laptops/liquids", "Easy-to-remove shoes", "Consider PreCheck"];
+  const checkpoints = [
+    { id: "A", name: "Checkpoint A", loc: "Terminal 2 · Level 1", wait: 12, trend: "steady", reports: 24, lastReport: "3 min ago", lanes: ["Standard", "PreCheck"], hours: "4:00 AM - 11:00 PM" },
+    { id: "B", name: "Checkpoint B", loc: "Terminal 4 · Level 1", wait: 8, trend: "decreasing", reports: 18, lastReport: "7 min ago", lanes: ["Standard", "PreCheck", "CLEAR"], hours: "4:30 AM - 10:30 PM" },
+    { id: "C", name: "Checkpoint C", loc: "Terminal 2 · Level 1 (South)", wait: 22, trend: "increasing", reports: 31, lastReport: "1 min ago", lanes: ["Standard"], hours: "5:00 AM - 9:00 PM" },
+  ];
+  const getColor = w => w <= 10 ? C.green : w <= 20 ? C.orange : C.red;
+  const getTrend = t => t === "steady" ? "→ Steady" : t === "decreasing" ? "↓ Decreasing" : "↑ Increasing";
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <ScreenHeader title="KONT · LIVE" subtitle="TSA Checkpoint Wait Times" goHome={goHome} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12 }}>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+          {[{ l: "Avg Wait", v: "14 min", c: C.orange }, { l: "Reports", v: "73", c: C.blue }, { l: "Best", v: "Chk B", c: C.green }].map(s => (
+            <View key={s.l} style={{ flex: 1, backgroundColor: C.white, borderRadius: 12, padding: 10, alignItems: "center" }}>
+              <Text style={{ fontSize: 16, fontWeight: "800", color: s.c }}>{s.v}</Text>
+              <Text style={{ fontSize: 10, color: C.gray, marginTop: 2 }}>{s.l}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={{ backgroundColor: C.white, borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
+          <TouchableOpacity onPress={() => setShowTips(!showTips)} style={{ padding: 12, paddingHorizontal: 16, flexDirection: "row", justifyContent: "space-between", backgroundColor: C.goldBg }}>
+            <Text style={{ fontWeight: "700", fontSize: 13, color: C.navy }}>💡 TSA Tips</Text>
+            <Text style={{ color: C.gray }}>{showTips ? "▲" : "▼"}</Text>
+          </TouchableOpacity>
+          {showTips && <View style={{ padding: 16, paddingTop: 8 }}>{tips.map(t => <Text key={t} style={{ fontSize: 12, color: C.navy, paddingVertical: 4 }}>✓ {t}</Text>)}</View>}
+        </View>
+        {checkpoints.map(cp => (
+          <View key={cp.id} style={{ backgroundColor: C.white, borderRadius: 14, marginBottom: 10, overflow: "hidden" }}>
+            <TouchableOpacity onPress={() => setExpanded(expanded === cp.id ? null : cp.id)} style={{ padding: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: getColor(cp.wait) + "18", alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 16, fontWeight: "800", color: getColor(cp.wait) }}>{cp.wait}</Text></View>
+                <View><Text style={{ fontWeight: "700", fontSize: 14, color: C.navy }}>{cp.name}</Text><Text style={{ fontSize: 11, color: C.gray }}>{cp.wait} min · {getTrend(cp.trend)}</Text></View>
+              </View>
+              <Text style={{ color: C.gray }}>{expanded === cp.id ? "▲" : "▼"}</Text>
+            </TouchableOpacity>
+            {expanded === cp.id && (
+              <View style={{ paddingHorizontal: 14, paddingBottom: 14, borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 12 }}>
+                <Text style={{ fontSize: 12, color: C.gray, marginBottom: 4 }}>{cp.loc} · {cp.hours}</Text>
+                <Text style={{ fontSize: 12, color: C.gray, marginBottom: 8 }}>{cp.reports} reports · Last: {cp.lastReport}</Text>
+                <View style={{ flexDirection: "row", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>{cp.lanes.map(l => <View key={l} style={{ backgroundColor: C.goldBg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3 }}><Text style={{ color: C.gold, fontSize: 11, fontWeight: "600" }}>{l}</Text></View>)}</View>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity onPress={() => { setReporting(cp.id); setReported(false); setReportVal(10); }} style={{ flex: 1, backgroundColor: C.gold, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.navy, fontWeight: "600", fontSize: 12 }}>📝 Report</Text></TouchableOpacity>
+                  <TouchableOpacity style={{ flex: 1, backgroundColor: C.navyLight, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.white, fontWeight: "600", fontSize: 12 }}>🧭 Navigate</Text></TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        ))}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+      {reporting && (
+        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 24, elevation: 10 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+            <Text style={{ fontWeight: "700", fontSize: 16, color: C.navy }}>Report Wait Time</Text>
+            <TouchableOpacity onPress={() => setReporting(null)}><Text style={{ fontSize: 18, color: C.gray }}>✕</Text></TouchableOpacity>
+          </View>
+          {reported ? (
+            <View style={{ alignItems: "center", paddingVertical: 20 }}>
+              <Text style={{ fontSize: 48 }}>✅</Text>
+              <Text style={{ fontWeight: "700", fontSize: 16, color: C.navy, marginTop: 8 }}>Thanks for reporting!</Text>
+              <Text style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>Your report helps other travelers</Text>
+            </View>
+          ) : (
+            <>
+              <View style={{ alignItems: "center", marginBottom: 16 }}><Text style={{ fontSize: 48, fontWeight: "800", color: getColor(reportVal) }}>{reportVal}</Text><Text style={{ fontSize: 14, color: C.gray }}>minutes</Text></View>
+              <View style={{ flexDirection: "row", gap: 8, justifyContent: "center", marginBottom: 20, flexWrap: "wrap" }}>
+                {[5, 10, 15, 20, 30, 45].map(v => (
+                  <TouchableOpacity key={v} onPress={() => setReportVal(v)} style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: reportVal === v ? C.gold : C.grayLight }}><Text style={{ color: reportVal === v ? C.navy : C.gray, fontWeight: "700", fontSize: 13 }}>{v}m</Text></TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity onPress={() => setReported(true)} style={{ backgroundColor: C.gold, borderRadius: 12, padding: 14, alignItems: "center" }}><Text style={{ color: C.navy, fontSize: 15, fontWeight: "700" }}>Submit Report</Text></TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ============ WALLET SCREEN ============
+function Wallet({ goHome }) {
+  const [selCard, setSelCard] = useState(null);
+  const cards = [
+    { id: 1, name: "Amex Platinum", last4: "4821", bg: "#666", perks: ["Centurion Lounge Access", "Priority Pass", "$200 Airline Credit"], icon: "💎" },
+    { id: 2, name: "Chase Sapphire Reserve", last4: "7733", bg: "#1a237e", perks: ["Priority Pass", "3x Travel Points", "$300 Travel Credit"], icon: "🔷" },
+    { id: 3, name: "Capital One Venture X", last4: "5592", bg: "#333", perks: ["Capital One Lounge", "Priority Pass", "10x Hotels"], icon: "🏦" },
+  ];
+  const lounges = [
+    { name: "Escape Lounge", access: true, via: "Amex Platinum", icon: "🛋️" },
+    { name: "USO Lounge", access: true, via: "Military ID", icon: "🇺🇸" },
+    { name: "Delta Sky Club", access: false, requires: "Delta Reserve Card", icon: "🔵" },
+  ];
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <ScreenHeader title="My Wallet" subtitle="Cards & lounge access" goHome={goHome} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12 }}>
+        <Text style={{ fontSize: 14, color: C.navy, fontWeight: "700", marginBottom: 10, marginLeft: 4 }}>My Cards</Text>
+        {cards.map(c => (
+          <TouchableOpacity key={c.id} onPress={() => setSelCard(selCard?.id === c.id ? null : c)} style={{ backgroundColor: c.bg, borderRadius: 16, padding: 18, marginBottom: 10, borderWidth: selCard?.id === c.id ? 2 : 0, borderColor: C.gold }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ fontSize: 22 }}>{c.icon}</Text><Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>•••• {c.last4}</Text></View>
+            <Text style={{ color: C.white, fontSize: 15, fontWeight: "700", marginTop: 16 }}>{c.name}</Text>
+            <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 4 }}>Mar 2026</Text>
+            {selCard?.id === c.id && (
+              <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.2)" }}>
+                <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginBottom: 6, fontWeight: "600" }}>PERKS</Text>
+                {c.perks.map(p => <Text key={p} style={{ fontSize: 12, color: "rgba(255,255,255,0.9)", paddingVertical: 3 }}>✓ {p}</Text>)}
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+        <Text style={{ fontSize: 14, color: C.navy, fontWeight: "700", marginTop: 8, marginBottom: 10, marginLeft: 4 }}>Lounge Access</Text>
+        {lounges.map(l => (
+          <View key={l.name} style={{ backgroundColor: C.white, borderRadius: 14, padding: 14, marginBottom: 8, flexDirection: "row", alignItems: "center" }}>
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: l.access ? "#e8f5e9" : "#ffebee", alignItems: "center", justifyContent: "center", marginRight: 12 }}><Text style={{ fontSize: 20 }}>{l.icon}</Text></View>
+            <View style={{ flex: 1 }}><Text style={{ fontWeight: "700", fontSize: 14, color: C.navy }}>{l.name}</Text>{l.access ? <Text style={{ fontSize: 12, color: C.green, fontWeight: "600", marginTop: 2 }}>✅ Access Granted · via {l.via}</Text> : <Text style={{ fontSize: 12, color: C.red, marginTop: 2 }}>🔒 Requires: {l.requires}</Text>}</View>
+          </View>
+        ))}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+// ============ DUTY FREE SCREEN (FIX #3: single-line swipeable pills + menu icon) ============
+function DutyFree({ goHome }) {
+  const [cat, setCat] = useState("All");
+  const [search, setSearch] = useState("");
+  const [favs, setFavs] = useState([]);
+  const [preOrdered, setPreOrdered] = useState([]);
+  const [showMenu, setShowMenu] = useState(false);
+  const cats = ["All", "Fragrances", "Spirits", "Cosmetics", "Electronics", "Accessories"];
+  const deals = [
+    { tag: "FLASH SALE", title: "30% Off All Fragrances", subtitle: "Today only · Chanel, Dior, Tom Ford & more", bg: "#2a1035", tagColor: "#ce93d8" },
+    { tag: "BUNDLE DEAL", title: "Buy 2 Spirits, Save $20", subtitle: "Mix & match premium whisky, vodka & gin", bg: "#1a2010", tagColor: "#aed581" },
+    { tag: "NEW ARRIVAL", title: "AirPods Pro 2 · $199", subtitle: "Duty-free exclusive — save $50 vs retail", bg: "#0d1a2e", tagColor: "#64b5f6" },
+    { tag: "MEMBER SPECIAL", title: "Extra 10% for Gold Tier", subtitle: "Use rewards points for additional savings", bg: "#2e1a08", tagColor: C.gold },
+  ];
+  const products = [
+    { id: 1, name: "Chanel N°5 EDP", cat: "Fragrances", price: 135, duty: 98, icon: "🌸", rating: 4.8 },
+    { id: 2, name: "Johnnie Walker Blue", cat: "Spirits", price: 189, duty: 142, icon: "🥃", rating: 4.9 },
+    { id: 3, name: "La Mer Moisturizer", cat: "Cosmetics", price: 195, duty: 155, icon: "✨", rating: 4.7 },
+    { id: 4, name: "AirPods Pro 2", cat: "Electronics", price: 249, duty: 199, icon: "🎧", rating: 4.6 },
+    { id: 5, name: "Ray-Ban Aviators", cat: "Accessories", price: 163, duty: 119, icon: "🕶️", rating: 4.5 },
+    { id: 6, name: "Dior Sauvage EDT", cat: "Fragrances", price: 115, duty: 82, icon: "🌿", rating: 4.7 },
+  ];
+  const filtered = products.filter(p => (cat === "All" || p.cat === cat) && (!search || p.name.toLowerCase().includes(search.toLowerCase())));
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <ScreenHeader title="Duty Free" subtitle="Save on premium brands" goHome={goHome} />
+      <View style={{ backgroundColor: C.navy, paddingHorizontal: 16, paddingBottom: 14 }}>
+        {/* Menu icon + Search bar (FIX #2: menu on left, same height) */}
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12, alignItems: "stretch" }}>
+          <TouchableOpacity onPress={() => setShowMenu(true)} style={{ width: 42, borderRadius: 10, backgroundColor: C.navyLight, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ color: C.gray, fontSize: 18 }}>☰</Text>
+          </TouchableOpacity>
+          <View style={{ flex: 1, backgroundColor: C.navyLight, borderRadius: 10, padding: 8, paddingHorizontal: 12, flexDirection: "row", alignItems: "center" }}>
+            <Text style={{ color: C.gray }}>🔍</Text>
+            <TextInput style={{ flex: 1, color: C.white, fontSize: 13, marginLeft: 8 }} placeholder="Search products..." placeholderTextColor={C.gray} value={search} onChangeText={setSearch} />
+          </View>
+        </View>
+        {/* Single-line swipeable pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ flexDirection: "row", gap: 6 }}>
+            {cats.map(c => (
+              <TouchableOpacity key={c} onPress={() => setCat(c)} style={{ paddingVertical: 7, paddingHorizontal: 14, borderRadius: 20, backgroundColor: cat === c ? C.gold : C.navyLight }}>
+                <Text style={{ color: cat === c ? C.navy : C.gray, fontSize: 12, fontWeight: "600" }}>{c}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+        <PromoCarousel items={deals} />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+          {filtered.map(p => (
+            <View key={p.id} style={{ width: (SW - 36) / 2, backgroundColor: C.white, borderRadius: 14, padding: 14, marginBottom: 10 }}>
+              <TouchableOpacity onPress={() => setFavs(favs.includes(p.id) ? favs.filter(f => f !== p.id) : [...favs, p.id])} style={{ position: "absolute", top: 10, right: 10, zIndex: 1 }}><Text style={{ fontSize: 16 }}>{favs.includes(p.id) ? "❤️" : "🤍"}</Text></TouchableOpacity>
+              <Text style={{ fontSize: 36, textAlign: "center", marginBottom: 8 }}>{p.icon}</Text>
+              <Text style={{ fontWeight: "700", fontSize: 13, color: C.navy }} numberOfLines={2}>{p.name}</Text>
+              <Text style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>⭐ {p.rating}</Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 6 }}><Text style={{ fontSize: 16, fontWeight: "800", color: C.gold }}>${p.duty}</Text><Text style={{ fontSize: 12, color: C.gray, textDecorationLine: "line-through" }}>${p.price}</Text></View>
+              <Text style={{ fontSize: 10, color: C.green, fontWeight: "600", marginTop: 2 }}>Save ${p.price - p.duty}</Text>
+              {preOrdered.includes(p.id) ? (
+                <View style={{ marginTop: 8, paddingVertical: 6, borderRadius: 8, backgroundColor: "#e8f5e9", alignItems: "center" }}><Text style={{ fontSize: 11, color: C.green, fontWeight: "700" }}>✓ Pre-ordered</Text></View>
+              ) : (
+                <TouchableOpacity onPress={() => setPreOrdered([...preOrdered, p.id])} style={{ marginTop: 8, backgroundColor: C.gold, borderRadius: 8, paddingVertical: 8, alignItems: "center" }}><Text style={{ color: C.navy, fontSize: 11, fontWeight: "600" }}>Pre-order for pickup</Text></TouchableOpacity>
+              )}
+            </View>
+          ))}
+        </View>
+        <View style={{ height: 20 }} />
+      </ScrollView>
+      {/* Category Menu Modal */}
+      {showMenu && (
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowMenu(false)} />
+          <View style={{ backgroundColor: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+              <Text style={{ fontWeight: "700", fontSize: 18, color: C.navy }}>Categories</Text>
+              <TouchableOpacity onPress={() => setShowMenu(false)}><Text style={{ fontSize: 18, color: C.gray }}>✕</Text></TouchableOpacity>
+            </View>
+            {cats.map(c => (
+              <TouchableOpacity key={c} onPress={() => { setCat(c); setShowMenu(false); }} style={{ padding: 14, borderRadius: 12, backgroundColor: cat === c ? C.goldBg : "transparent", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <Text style={{ fontSize: 15, color: C.navy, fontWeight: cat === c ? "700" : "400" }}>{c}</Text>
+                {cat === c && <Text style={{ color: C.gold, fontSize: 16 }}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ============ PARKING SCREEN (NEW) ============
+function Parking({ goHome }) {
+  const [selLot, setSelLot] = useState(null);
+  const [booked, setBooked] = useState(null);
+  const [payMode, setPayMode] = useState(null);
+  const lots = [
+    { id: 1, name: "Lot A — Terminal 2", type: "Short-Term", rate: "$3/hr", daily: "$24/day", spots: 142, total: 400, distance: "2 min walk", icon: "🅿️" },
+    { id: 2, name: "Lot B — Terminal 4", type: "Short-Term", rate: "$3/hr", daily: "$24/day", spots: 89, total: 350, distance: "3 min walk", icon: "🅿️" },
+    { id: 3, name: "Lot C — Economy", type: "Long-Term", rate: "$2/hr", daily: "$14/day", spots: 523, total: 1200, distance: "8 min shuttle", icon: "🚌" },
+    { id: 4, name: "Lot D — Economy", type: "Long-Term", rate: "$2/hr", daily: "$12/day", spots: 671, total: 1000, distance: "10 min shuttle", icon: "🚌" },
+    { id: 5, name: "Premium Valet", type: "Valet", rate: "$5/hr", daily: "$45/day", spots: 18, total: 50, distance: "Terminal drop-off", icon: "🔑" },
+  ];
+  const getAvailColor = (spots, total) => {
+    const pct = spots / total;
+    return pct > 0.3 ? C.green : pct > 0.1 ? C.orange : C.red;
+  };
+  const getAvailLabel = (spots, total) => {
+    const pct = spots / total;
+    return pct > 0.3 ? "Available" : pct > 0.1 ? "Filling Up" : "Almost Full";
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <ScreenHeader title="Parking" subtitle="Pre-book or pay for parking" goHome={goHome} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12 }}>
+        {/* Summary stats */}
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+          {[{ l: "Best Rate", v: "$12/day", c: C.green }, { l: "Total Open", v: "1,443", c: C.blue }, { l: "Pre-Book", v: "Save 40%", c: C.gold }].map(s => (
+            <View key={s.l} style={{ flex: 1, backgroundColor: C.white, borderRadius: 12, padding: 10, alignItems: "center" }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: s.c }}>{s.v}</Text>
+              <Text style={{ fontSize: 10, color: C.gray, marginTop: 2 }}>{s.l}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Active booking */}
+        {booked && (
+          <View style={{ backgroundColor: C.white, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 2, borderColor: C.gold }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={{ fontSize: 11, color: C.gold, fontWeight: "700" }}>🅿️ ACTIVE PARKING</Text>
+              <View style={{ backgroundColor: "#e8f5e9", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}><Text style={{ fontSize: 10, color: C.green, fontWeight: "700" }}>CONFIRMED</Text></View>
+            </View>
+            <Text style={{ fontWeight: "700", fontSize: 15, color: C.navy }}>{booked.name}</Text>
+            <Text style={{ fontSize: 12, color: C.gray, marginTop: 4 }}>Booked at {booked.daily} · {booked.distance}</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: C.gold, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.navy, fontWeight: "600", fontSize: 12 }}>🧭 Navigate to Lot</Text></TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: C.navyLight, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.white, fontWeight: "600", fontSize: 12 }}>⏱ Extend Time</Text></TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Lot cards */}
+        <Text style={{ fontSize: 14, color: C.navy, fontWeight: "700", marginBottom: 10, marginLeft: 4 }}>Available Lots</Text>
+        {lots.map(lot => {
+          const avColor = getAvailColor(lot.spots, lot.total);
+          const avLabel = getAvailLabel(lot.spots, lot.total);
+          const isSelected = selLot?.id === lot.id;
+          return (
+            <TouchableOpacity key={lot.id} onPress={() => setSelLot(isSelected ? null : lot)} style={{ backgroundColor: C.white, borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: isSelected ? 2 : 1, borderColor: isSelected ? C.gold : "#eee" }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: C.goldBg, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                  <Text style={{ fontSize: 22 }}>{lot.icon}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "700", fontSize: 14, color: C.navy }}>{lot.name}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    <View style={{ backgroundColor: avColor + "18", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 10, color: avColor, fontWeight: "700" }}>{avLabel} · {lot.spots} spots</Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={{ fontSize: 15, fontWeight: "800", color: C.gold }}>{lot.daily}</Text>
+                  <Text style={{ fontSize: 10, color: C.gray }}>{lot.rate}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
+                <Text style={{ fontSize: 11, color: C.gray }}>📍 {lot.distance}</Text>
+                <Text style={{ fontSize: 11, color: C.gray }}>{lot.type}</Text>
+              </View>
+              {/* Availability bar */}
+              <View style={{ height: 4, backgroundColor: C.grayLight, borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                <View style={{ width: `${(lot.spots / lot.total) * 100}%`, height: "100%", backgroundColor: avColor, borderRadius: 2 }} />
+              </View>
+              {isSelected && (
+                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#eee" }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <TouchableOpacity onPress={() => { setBooked(lot); setSelLot(null); }} style={{ flex: 1, backgroundColor: C.gold, borderRadius: 8, padding: 12, alignItems: "center" }}>
+                      <Text style={{ color: C.navy, fontWeight: "700", fontSize: 13 }}>Pre-Book Now</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => { setBooked(lot); setSelLot(null); }} style={{ flex: 1, backgroundColor: C.navyLight, borderRadius: 8, padding: 12, alignItems: "center" }}>
+                      <Text style={{ color: C.white, fontWeight: "700", fontSize: 13 }}>Pay Now</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 10 }}>
+                    <Text style={{ fontSize: 11, color: C.gray }}>💳 Saved Card</Text>
+                    <Text style={{ fontSize: 11, color: C.gray }}> Apple Pay</Text>
+                    <Text style={{ fontSize: 11, color: C.gray }}> Google Pay</Text>
+                  </View>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+// ============ PROFILE SCREEN ============
+function Profile({ setScreen }) {
+  const [sub, setSub] = useState(null);
+  const [homeAirport, setHomeAirport] = useState("ONT");
+  const [prefAirline, setPrefAirline] = useState("Southwest");
+  const [ffNumbers, setFfNumbers] = useState([{ airline: "Southwest", number: "RR-48291037" }]);
+  const [programs, setPrograms] = useState([{ name: "TSA PreCheck", id: "KTN-938172", verified: true }]);
+  const [savedCards, setSavedCards] = useState([
+    { id: 1, name: "Amex Platinum", last4: "4821", type: "Amex", exp: "08/27", isDefault: true },
+    { id: 2, name: "Chase Sapphire Reserve", last4: "7733", type: "Visa", exp: "03/28", isDefault: false },
+    { id: 3, name: "Capital One Venture X", last4: "5592", type: "Visa", exp: "11/26", isDefault: false },
+  ]);
+  const stats = [{ l: "Reward Pts", v: "340", icon: "🏆" }, { l: "Flights", v: "12", icon: "✈️" }, { l: "Orders", v: "8", icon: "🛒" }];
+  const menuItems = [
+    { label: "Rewards", icon: "🏆", key: "rewards" },
+    { label: "Order History", icon: "📋", key: "orders" },
+    { label: "Saved Cards", icon: "💳", key: "cards" },
+    { label: "Travel Preferences", icon: "🌍", key: "travel" },
+    { label: "Settings", icon: "⚙️", key: "settings" },
+  ];
+
+  const SubHeader = ({ title }) => (
+    <View style={{ backgroundColor: C.navy, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <TouchableOpacity onPress={() => setSub(null)}><Text style={{ color: C.gold, fontSize: 18 }}>←</Text></TouchableOpacity>
+      <Text style={{ color: C.white, fontSize: 18, fontWeight: "700" }}>{title}</Text>
+    </View>
+  );
+
+  if (sub === "rewards") return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}><TopSpacer /><SubHeader title="My Rewards" />
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <View style={{ backgroundColor: C.white, borderRadius: 16, padding: 20, alignItems: "center", marginBottom: 16 }}>
+          <Text style={{ fontSize: 36, fontWeight: "800", color: C.gold }}>340</Text><Text style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>points earned</Text>
+          <View style={{ width: "100%", height: 10, backgroundColor: C.grayLight, borderRadius: 8, marginTop: 12, overflow: "hidden" }}><View style={{ width: "57%", height: "100%", backgroundColor: C.gold, borderRadius: 8 }} /></View>
+          <Text style={{ fontSize: 11, color: C.gray, marginTop: 6 }}>340 / 600 pts to next reward</Text>
+        </View>
+        <Text style={{ fontSize: 14, color: C.navy, fontWeight: "700", marginBottom: 10 }}>How to Earn</Text>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, padding: 14, marginBottom: 16 }}>
+          <Text style={{ fontSize: 13, color: C.navy, marginBottom: 6 }}>🛒 <Text style={{ fontWeight: "700" }}>10 pts</Text> per order</Text>
+          <Text style={{ fontSize: 13, color: C.navy, marginBottom: 6 }}>🔄 <Text style={{ fontWeight: "700" }}>+2 pts</Text> reorder bonus</Text>
+          <Text style={{ fontSize: 13, color: C.navy }}>🔥 <Text style={{ fontWeight: "700" }}>2x pts</Text> streak bonus (3+ orders)</Text>
+        </View>
+        <Text style={{ fontSize: 14, color: C.navy, fontWeight: "700", marginBottom: 10 }}>Redeem</Text>
+        {[{ n: "Free side", pts: 60, icon: "🍟" }, { n: "Free drink", pts: 60, icon: "🥤" }, { n: "$5 off", pts: 120, icon: "💰" }].map(r => (
+          <View key={r.n} style={{ backgroundColor: C.white, borderRadius: 12, padding: 14, marginBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><Text style={{ fontSize: 24 }}>{r.icon}</Text><View><Text style={{ fontWeight: "700", fontSize: 14, color: C.navy }}>{r.n}</Text><Text style={{ fontSize: 11, color: C.gray }}>{r.pts} pts</Text></View></View>
+            <TouchableOpacity style={{ backgroundColor: 340 >= r.pts ? C.gold : C.grayLight, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14 }}><Text style={{ color: 340 >= r.pts ? C.navy : C.gray, fontWeight: "700", fontSize: 12 }}>{340 >= r.pts ? "Redeem" : "Need more"}</Text></TouchableOpacity>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  if (sub === "orders") return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}><TopSpacer /><SubHeader title="Order History" />
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {[{ biz: "Starbucks", icon: "☕", items: "Iced Latte, Croissant", date: "Mar 18", total: "$9.45" }, { biz: "El Pollo Loco", icon: "🍗", items: "Chicken Bowl", date: "Mar 12", total: "$14.20" }, { biz: "Hudson News", icon: "🛍", items: "Water, Trail Mix", date: "Feb 28", total: "$18.75" }].map(o => (
+          <View key={o.biz} style={{ backgroundColor: C.white, borderRadius: 14, padding: 14, marginBottom: 10 }}>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: C.goldBg, alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 22 }}>{o.icon}</Text></View>
+              <View style={{ flex: 1 }}><Text style={{ fontWeight: "700", fontSize: 14, color: C.navy }}>{o.biz}</Text><Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{o.items}</Text><View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}><Text style={{ fontSize: 11, color: C.gray }}>{o.date}</Text><Text style={{ fontSize: 13, fontWeight: "700", color: C.navy }}>{o.total}</Text></View></View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: C.gold, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.navy, fontWeight: "600", fontSize: 12 }}>🔄 Reorder</Text></TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, backgroundColor: C.grayLight, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.navy, fontWeight: "600", fontSize: 12 }}>🧾 Receipt</Text></TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  if (sub === "cards") return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}><TopSpacer /><SubHeader title="Saved Cards" />
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {savedCards.map(c => (
+          <View key={c.id} style={{ backgroundColor: C.white, borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: c.isDefault ? 2 : 1, borderColor: c.isDefault ? C.gold : "#eee" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: C.navyLight, alignItems: "center", justifyContent: "center" }}><Text style={{ color: C.white, fontSize: 11, fontWeight: "700" }}>{c.type}</Text></View>
+                <View><Text style={{ fontWeight: "700", fontSize: 14, color: C.navy }}>{c.name}</Text><Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>•••• {c.last4} · Exp {c.exp}</Text></View>
+              </View>
+              {c.isDefault && <View style={{ backgroundColor: C.goldBg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ fontSize: 10, color: C.gold, fontWeight: "700" }}>DEFAULT</Text></View>}
+            </View>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+              {!c.isDefault && <TouchableOpacity onPress={() => setSavedCards(savedCards.map(card => ({ ...card, isDefault: card.id === c.id })))} style={{ flex: 1, backgroundColor: C.gold, borderRadius: 8, padding: 10, alignItems: "center" }}><Text style={{ color: C.navy, fontWeight: "600", fontSize: 12 }}>Set as Default</Text></TouchableOpacity>}
+              <TouchableOpacity onPress={() => setSavedCards(savedCards.filter(card => card.id !== c.id))} style={{ flex: 1, backgroundColor: "#fff5f5", borderRadius: 8, padding: 10, alignItems: "center", borderWidth: 1, borderColor: "#ffcdd2" }}><Text style={{ color: C.red, fontWeight: "600", fontSize: 12 }}>Remove</Text></TouchableOpacity>
+            </View>
+          </View>
+        ))}
+        <TouchableOpacity style={{ backgroundColor: C.white, borderRadius: 14, padding: 16, alignItems: "center", borderWidth: 1.5, borderColor: C.gold, borderStyle: "dashed" }}>
+          <Text style={{ fontSize: 24, marginBottom: 4 }}>+</Text>
+          <Text style={{ fontSize: 14, color: C.gold, fontWeight: "600" }}>Add New Card</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+
+  if (sub === "travel") return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}><TopSpacer /><SubHeader title="Travel Preferences" />
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Text style={{ fontSize: 13, color: C.gray, fontWeight: "600", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Home Airport</Text>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, marginBottom: 16, overflow: "hidden" }}>
+          {["ONT", "LAX", "SNA", "BUR", "LGB"].map((a, i) => (
+            <TouchableOpacity key={a} onPress={() => setHomeAirport(a)} style={{ padding: 14, paddingHorizontal: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "#f0f0f0" }}>
+              <Text style={{ fontSize: 14, color: C.navy, fontWeight: homeAirport === a ? "700" : "400" }}>{a === "ONT" ? "Ontario (ONT)" : a === "LAX" ? "Los Angeles (LAX)" : a === "SNA" ? "John Wayne (SNA)" : a === "BUR" ? "Burbank (BUR)" : "Long Beach (LGB)"}</Text>
+              {homeAirport === a && <Text style={{ color: C.gold, fontSize: 16 }}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={{ fontSize: 13, color: C.gray, fontWeight: "600", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Preferred Airline</Text>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, marginBottom: 16, overflow: "hidden" }}>
+          {["Southwest", "United", "Delta", "American", "JetBlue", "Alaska"].map((al, i) => (
+            <TouchableOpacity key={al} onPress={() => setPrefAirline(al)} style={{ padding: 14, paddingHorizontal: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "#f0f0f0" }}>
+              <Text style={{ fontSize: 14, color: C.navy, fontWeight: prefAirline === al ? "700" : "400" }}>{al}</Text>
+              {prefAirline === al && <Text style={{ color: C.gold, fontSize: 16 }}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={{ fontSize: 13, color: C.gray, fontWeight: "600", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Frequent Flyer Numbers</Text>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, marginBottom: 16, overflow: "hidden" }}>
+          {ffNumbers.map((ff, i) => (
+            <View key={i} style={{ padding: 14, paddingHorizontal: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "#f0f0f0" }}>
+              <View><Text style={{ fontSize: 14, fontWeight: "600", color: C.navy }}>{ff.airline}</Text><Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{ff.number}</Text></View>
+              <TouchableOpacity onPress={() => setFfNumbers(ffNumbers.filter((_, idx) => idx !== i))}><Text style={{ color: C.red, fontSize: 12 }}>Remove</Text></TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity onPress={() => setFfNumbers([...ffNumbers, { airline: "United", number: "MP-" + Math.floor(Math.random() * 90000000 + 10000000) }])} style={{ padding: 14, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 8, borderTopWidth: ffNumbers.length > 0 ? 1 : 0, borderTopColor: "#f0f0f0" }}>
+            <Text style={{ color: C.gold, fontSize: 16 }}>+</Text><Text style={{ color: C.gold, fontSize: 14, fontWeight: "600" }}>Add Frequent Flyer Number</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={{ fontSize: 13, color: C.gray, fontWeight: "600", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Traveler Programs</Text>
+        <View style={{ backgroundColor: C.white, borderRadius: 12, marginBottom: 16, overflow: "hidden" }}>
+          {programs.map((p, i) => (
+            <View key={i} style={{ padding: 14, paddingHorizontal: 16, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "#f0f0f0" }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View><Text style={{ fontSize: 14, fontWeight: "600", color: C.navy }}>{p.name}</Text><Text style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>{p.id}</Text></View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {p.verified && <View style={{ backgroundColor: "#e8f5e9", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ fontSize: 10, color: C.green, fontWeight: "700" }}>✓ VERIFIED</Text></View>}
+                  <TouchableOpacity onPress={() => setPrograms(programs.filter((_, idx) => idx !== i))}><Text style={{ color: C.red, fontSize: 12 }}>Remove</Text></TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ))}
+          <View style={{ padding: 14, paddingHorizontal: 16, borderTopWidth: programs.length > 0 ? 1 : 0, borderTopColor: "#f0f0f0" }}>
+            <Text style={{ color: C.gold, fontSize: 14, fontWeight: "600", marginBottom: 10 }}>+ Add Program</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {["Global Entry", "CLEAR", "NEXUS", "SENTRI", "FAST"].filter(name => !programs.find(p => p.name === name)).map(name => (
+                <TouchableOpacity key={name} onPress={() => setPrograms([...programs, { name, id: `${name === "CLEAR" ? "CLEAR-" : "ID-"}${Math.floor(Math.random() * 900000 + 100000)}`, verified: false }])} style={{ backgroundColor: C.grayLight, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12 }}>
+                  <Text style={{ fontSize: 12, color: C.navy, fontWeight: "600" }}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+
+  if (sub === "settings") return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}><TopSpacer /><SubHeader title="Settings" />
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {[{ section: "Account", items: ["Edit profile", "Change password", "Linked accounts"] }, { section: "Notifications", items: ["Push notifications", "Gate change alerts", "TSA wait spikes", "Promotions & deals", "Parking expiry"] }, { section: "App Preferences", items: ["Language", "Distance units", "Map theme"] }, { section: "Privacy & Data", items: ["Privacy policy", "Terms of service", "Clear cache", "Delete account"] }].map(s => (
+          <View key={s.section} style={{ marginBottom: 16 }}>
+            <Text style={{ fontSize: 13, color: C.gray, fontWeight: "600", marginBottom: 8, marginLeft: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.section}</Text>
+            <View style={{ backgroundColor: C.white, borderRadius: 12, overflow: "hidden" }}>
+              {s.items.map((item, i) => (
+                <View key={item} style={{ padding: 12, paddingHorizontal: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "#f0f0f0" }}>
+                  <Text style={{ fontSize: 14, color: item === "Delete account" ? C.red : C.navy }}>{item}</Text>
+                  {s.section === "Notifications" ? <View style={{ width: 40, height: 22, borderRadius: 11, backgroundColor: C.gold, padding: 2, justifyContent: "center" }}><View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: C.white, alignSelf: "flex-end" }} /></View> : <Text style={{ color: C.gray }}>›</Text>}
+                </View>
+              ))}
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <TopSpacer />
+      <View style={{ backgroundColor: C.navy, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <TouchableOpacity onPress={() => setScreen("home")}><Text style={{ color: C.gold, fontSize: 18 }}>←</Text></TouchableOpacity>
+        <Text style={{ color: C.white, fontSize: 18, fontWeight: "700" }}>Profile</Text>
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 0 }}>
+        <View style={{ backgroundColor: C.navy, paddingVertical: 20, paddingHorizontal: 16, alignItems: "center" }}>
+          <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.navyLight, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: C.gold, marginBottom: 10 }}><Text style={{ fontSize: 28 }}>👤</Text></View>
+          <Text style={{ color: C.white, fontSize: 18, fontWeight: "700" }}>Alex Rivera</Text>
+          <Text style={{ color: C.gray, fontSize: 13, marginTop: 2 }}>alex.rivera@email.com</Text>
+        </View>
+        <View style={{ padding: 16 }}>
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+            {stats.map(s => (
+              <View key={s.l} style={{ flex: 1, backgroundColor: C.white, borderRadius: 14, padding: 14, alignItems: "center" }}><Text style={{ fontSize: 20 }}>{s.icon}</Text><Text style={{ fontSize: 20, fontWeight: "800", color: C.navy, marginTop: 4 }}>{s.v}</Text><Text style={{ fontSize: 10, color: C.gray, marginTop: 2 }}>{s.l}</Text></View>
+            ))}
+          </View>
+          {menuItems.map(m => (
+            <TouchableOpacity key={m.key} onPress={() => setSub(m.key)} style={{ backgroundColor: C.white, borderRadius: 12, padding: 14, paddingHorizontal: 16, marginBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}><Text style={{ fontSize: 18 }}>{m.icon}</Text><Text style={{ fontSize: 14, fontWeight: "600", color: C.navy }}>{m.label}</Text></View>
+              <Text style={{ color: C.gray }}>›</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={{ marginTop: 8, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: "#ffcdd2", backgroundColor: "#fff5f5", alignItems: "center" }}><Text style={{ color: C.red, fontSize: 14, fontWeight: "600" }}>Sign Out</Text></TouchableOpacity>
+          <View style={{ height: 20 }} />
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ============ MAIN APP (FIX #2: Profile → Ticket in tab bar) ============
+export default function App() {
+  const [sc, setSc] = useState("welcome");
+  const [myFlight, setMyFlight] = useState(null);
+
+  const tabs = [
+    { key: "home", label: "Home", icon: "🏠" },
+    { key: "map", label: "Map", icon: "🗺️" },
+    { key: "flights", label: "Flights", icon: "✈️" },
+    { key: "ticket", label: "Ticket", icon: "🎫" },
+  ];
+
+  if (sc === "welcome") return (
+    <View style={{ flex: 1, backgroundColor: C.navy }}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <Welcome onLogin={() => setSc("home")} />
+    </View>
+  );
+
+  const goHome = () => setSc("home");
+
+  const renderScreen = () => {
+    switch (sc) {
+      case "home": return <Home setScreen={setSc} />;
+      case "map": return <MapScreen myFlight={myFlight} goHome={goHome} />;
+      case "flights": return <Flights myFlight={myFlight} setMyFlight={setMyFlight} goHome={goHome} />;
+      case "tsa": return <TSA goHome={goHome} />;
+      case "wallet": return <Wallet goHome={goHome} />;
+      case "dutyfree": return <DutyFree goHome={goHome} />;
+      case "parking": return <Parking goHome={goHome} />;
+      case "ticket": return <TicketScreen myFlight={myFlight} setMyFlight={setMyFlight} goHome={goHome} />;
+      case "profile": return <Profile setScreen={setSc} />;
+      default: return <Home setScreen={setSc} />;
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.navy }}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <View style={{ flex: 1 }}>{renderScreen()}</View>
+      {/* Bottom Tab Bar */}
+      <View style={{ backgroundColor: C.navy, paddingTop: 8, paddingBottom: 20, flexDirection: "row", justifyContent: "space-around", borderTopWidth: 1, borderTopColor: C.navyLight }}>
+        {tabs.map(t => {
+          const isActive = sc === t.key || (t.key === "home" && ["tsa", "wallet", "dutyfree", "profile"].includes(sc));
+          return (
+            <TouchableOpacity key={t.key} onPress={() => setSc(t.key)} style={{ alignItems: "center", paddingHorizontal: 12, paddingVertical: 4 }}>
+              <Text style={{ fontSize: 20, opacity: isActive ? 1 : 0.5 }}>{t.icon}</Text>
+              <Text style={{ fontSize: 10, fontWeight: "600", color: isActive ? C.gold : C.gray, marginTop: 2 }}>{t.label}</Text>
+              {isActive && <View style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: C.gold, marginTop: 3 }} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
